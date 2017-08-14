@@ -14,12 +14,17 @@ Function Write-Log($message, $level="INFO") {
 
 Function Reboot-AndResume($action) {
     # need to reboot the server and rerun this script at the next action
-    $command = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File A:\bootstrap.ps1 $action"
+    $command = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe A:\bootstrap.ps1 $action"
     $reg_key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
     $reg_property_name = "bootstrap"
     Set-ItemProperty -Path $reg_key -Name $reg_property_name -Value $command
     Write-Log -message "rebooting server and continuing bootstrap.ps1 with action '$action'"
-    Restart-Computer -Force
+    if (Get-Command -Name Restart-Computer -ErrorAction SilentlyContinue) {
+        Restart-Computer -Force
+    } else {
+        # PS v1 (Server 2008) doesn't have the cmdlet Restart-Computer, use el-traditional
+        shutdown /r /t 0
+    }
 }
 
 Function Run-Process($executable, $arguments) {
@@ -53,11 +58,12 @@ Write-Log -message "starting bootstrap.ps1 with action '$action'"
 # run based on where it is started, e.g. 2008-sp2 goes to dotnet which goes to
 # powershell and finally default.
 #   1. 2008-sp2 - Installs SP2 on Server 2008, eval ISO do not have this pre-installed :( (Server 2008)
-#   2. dotnet - Installs .NET 4.5 required by Powershell 4.0 (Server 2008 and 2008 R2)
-#   3. powershell - Installs Powershell 4.0 (Server 2008 and 2008 R2)
-#   4. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
-#   5. update-wua - Updates the windows update agent to the latest version (all)
-#   6. default - Configures WinRM HTTP and HTTPS listener (all)
+#   2. powershell-2 - Installs Powershell 2.0 (Server 2008)
+#   3. dotnet - Installs .NET 4.5 required by Powershell 4.0 (Server 2008 and 2008 R2)
+#   4. powershell-4 - Installs Powershell 4.0 (Server 2008 and 2008 R2)
+#   5. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
+#   6. update-wua - Updates the windows update agent to the latest version (all)
+#   7. winrm-listener - Configures WinRM HTTP and HTTPS listener (all)
 #
 # These are all actions that need to be run before Ansible can talk to the host
 # the older the OS the more tasks that need to be run
@@ -79,6 +85,25 @@ switch($action) {
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
+        Reboot-AndResume -action "powershell-2"
+    }
+    "powershell-2" {
+        Write-Log -message "running powershell update to version 2"
+        $architecture = $env:PROCESSOR_ARCHITECTURE
+        if ($architecture -eq "AMD64") {
+            $ps_url = "https://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu"
+        } else {
+            $ps_url = "https://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu"
+        }
+        $ps_filename = $ps_url.Split("/")[-1]
+        $ps_file = "$tmp_dir\$ps_filename"
+        Download-File -url $ps_url -path $ps_file
+        $exit_code = Run-Process -executable $ps_file -arguments "/quiet /norestart"
+        if ($exit_code -ne 0 -and $exit_code -ne 3010) {
+            $error_message = "failed to update Powershell from 1.0 to 2.0: exit code $exit_code"
+            Write-Log -message $error_message -level "ERROR"
+            throw $error_message
+        }
         Reboot-AndResume -action "dotnet"
     }
     "dotnet" {
@@ -92,9 +117,9 @@ switch($action) {
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
-        Reboot-AndResume -action "powershell"
+        Reboot-AndResume -action "powershell-4"
     }
-    "powershell" {
+    "powershell-4" {
         Write-Log -message "running powershell update to version 4"
         $os_version_minor = [Environment]::OSVersion.Version.Minor
         $architecture = $env:PROCESSOR_ARCHITECTURE
@@ -223,15 +248,15 @@ switch($action) {
         } else {
             Write-Log -message "could not match host string $host_string with wua update, assuming wua update isn't needed"
         }
-        Reboot-AndResume -action ""
+        Reboot-AndResume -action "winrm-listener"
     }
-    default {
+    "winrm-listener" {
         # This would be the final task to run which downloads the Ansible
         # WinRM configuration script and runs it
         $url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
         $file = "$tmp_dir\ConfigureRemotingForAnsible.ps1"
         Download-File -url $url -path $file
-        $exit_code = Run-Process -executable "cmd.exe" -arguments "/c $env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File $file"
+        $exit_code = Run-Process -executable "cmd.exe" -arguments "/c $env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe $file"
         if ($exit_code -ne 0) {
             $error_message = "failed to configure WinRM endpoint required by Ansible"
             Write-Log -message $error_message -level "ERROR"
@@ -242,6 +267,11 @@ switch($action) {
         Write-Log -message "Removing AutoAdminLogon and DefaultUserName from reg path $reg_winlogon_path"
         Remove-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon
         Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultUserName
+    }
+    default {
+        $error_message = "invalid action '$action', cannot continue"
+        Write-Log -message $error_message -level "ERROR"
+        throw $error_message
     }
 }
 

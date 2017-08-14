@@ -1,4 +1,16 @@
 ---
+- name: remove page file
+  win_regedit:
+    path: HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management
+    name: PagingFiles
+    data: ""
+    state: present
+  register: pagefile_removal
+
+- name: reboot server after clearing page file
+  win_reboot:
+  when: pagefile_removal|changed
+
 - name: cleanup the temp folders
   win_file:
     path: '{{item}}'
@@ -7,7 +19,11 @@
   - C:\Temp
   - C:\Windows\Panther
   - C:\Windows\Temp
-  - C:\Windows\manifestcache
+
+# remove files in C:\Windows\winsxs\ManifestCache (not folder)
+# Takeown /f %windir%\winsxs\ManifestCache\*
+# Icacls %windir%\winsxs\ManifestCache\* /GRANT administrators:F
+# Del /q %windir%\winsxs\ManifestCache\*
 
 - name: see if Optimize-Volume cmdlet is available
   win_command: powershell.exe "Get-Command -Name Optimize-Volume"
@@ -19,7 +35,7 @@
   when: defrag_cmdlet_available.rc == 0
 
 - name: defrag C with legacy exe
-  win_command: 'Defrag.exe C: /H'
+  win_command: 'Defrag.exe C:'
   when: defrag_cmdlet_available.rc != 0
 
 - name: 0 out empty space for later compression
@@ -44,15 +60,3 @@
         }
     }
     Remove-Item -Path $path -Force | Out-Null
-
-- name: remove page file
-  win_regedit:
-    path: HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management
-    name: PagingFiles
-    data: ""
-    state: present
-  register: pagefile_removal
-
-- name: reboot server after clearing page file
-  win_reboot:
-  when: pagefile_removal|changed

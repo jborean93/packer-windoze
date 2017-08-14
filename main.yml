@@ -1,9 +1,17 @@
 ---
 - name: setup new Vagrant box with the latest updates and config
   hosts: windows
+  gather_facts: no
+
+  pre_tasks:
+  - name: get major and minor version of Windows for later tasks
+    win_shell: |
+      $version = [Environment]::OSVersion.Version
+      Write-Host "$($version.Major).$($version.Minor)-$($env:PROCESSOR_ARCHITECTURE)"
+    register: os_version
 
   roles:
-  #- update
+  #- update # TODO: get the rest of the cleanup working before takling this beast
   - cleanup-winsxs
   - cleanup-features
   - cleanup
