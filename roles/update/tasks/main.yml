@@ -1,0 +1,12 @@
+---
+- name: get windows update agent version for debugging purposes
+  win_file_version:
+    path: C:\Windows\System32\wuaueng.dll
+  register: windows_update_agent_version
+
+- name: windows update agent version
+  debug:
+    var: windows_update_agent_version
+
+- include_tasks: update.yml
+  until: update_count is defined and update_count.found_update_count|int >= 1

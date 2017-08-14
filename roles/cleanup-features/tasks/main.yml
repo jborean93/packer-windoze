@@ -1,0 +1,9 @@
+---
+- name: check if the Uninstall-WindowsFeature cmdlet is available
+  win_command: powershell.exe "Get-Command -Name Uninstall-WindowsFeature"
+  register: uninstall_available
+  failed_when: False
+
+- name: uninstall all unused Windows Features if function is available
+  win_shell: Get-WindowsFeature | Where-Object { $_.InstallState -eq 'Available' } | Uninstall-WindowsFeature -Remove
+  when: uninstall_available.rc == 0

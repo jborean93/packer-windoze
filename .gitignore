@@ -1,0 +1,7 @@
+output-virtualbox-iso/*
+packer_cache/*
+hosts
+*.retry
+.DS_Store
+.vagrant/*
+*.box

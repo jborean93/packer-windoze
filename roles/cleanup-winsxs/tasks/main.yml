@@ -1,0 +1,22 @@
+---
+- name: determine if host supports DISM
+  win_shell: |
+    $version = [Environment]::OSVersion.Version
+    $major = $version.Major
+    $minor = $version.Minor
+    if ($major -eq 6) {
+        if ($minor -gt 1) {
+            "true"
+        } else {
+            "false"
+        }
+    } elseif ($major -gt 6) {
+        "true"
+    } else {
+        "false"
+    }
+  register: dism_supported
+
+- name: run DISM cleanup if supported
+  win_command: DISM.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+  when: dism_supported.stdout_lines[0] == "true"

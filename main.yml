@@ -1,0 +1,10 @@
+---
+- name: setup new Vagrant box with the latest updates and config
+  hosts: windows
+
+  roles:
+  #- update
+  - cleanup-winsxs
+  - cleanup-features
+  - cleanup
+  - sysprep

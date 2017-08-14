@@ -14,7 +14,7 @@ Function Write-Log($message, $level="INFO") {
 
 Function Reboot-AndResume($action) {
     # need to reboot the server and rerun this script at the next action
-    $command = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -File A:\bootstrap.ps1 $action"
+    $command = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File A:\bootstrap.ps1 $action"
     $reg_key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
     $reg_property_name = "bootstrap"
     Set-ItemProperty -Path $reg_key -Name $reg_property_name -Value $command
@@ -39,7 +39,7 @@ Function Run-Process($executable, $arguments) {
 
 Function Download-File($url, $path) {
     Write-Log -message "downloading url '$url' to '$path'"
-    $client = New-Object -Typename System.Net.WebClient
+    $client = New-Object -TypeName System.Net.WebClient
     $client.DownloadFile($url, $path)
 }
 
@@ -56,7 +56,8 @@ Write-Log -message "starting bootstrap.ps1 with action '$action'"
 #   2. dotnet - Installs .NET 4.5 required by Powershell 4.0 (Server 2008 and 2008 R2)
 #   3. powershell - Installs Powershell 4.0 (Server 2008 and 2008 R2)
 #   4. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
-#   5. default - Configures WinRM HTTP and HTTPS listener (all)
+#   5. update-wua - Updates the windows update agent to the latest version (all)
+#   6. default - Configures WinRM HTTP and HTTPS listener (all)
 #
 # These are all actions that need to be run before Ansible can talk to the host
 # the older the OS the more tasks that need to be run
@@ -79,7 +80,6 @@ switch($action) {
             throw $error_message
         }
         Reboot-AndResume -action "dotnet"
-        break
     }
     "dotnet" {
         Write-Log -message "running .NET update to 4.5"
@@ -93,7 +93,6 @@ switch($action) {
             throw $error_message
         }
         Reboot-AndResume -action "powershell"
-        break
     }
     "powershell" {
         Write-Log -message "running powershell update to version 4"
@@ -120,7 +119,6 @@ switch($action) {
             throw $error_message
         }
         Reboot-AndResume -action "winrm-hotfix"
-        break
     }
     "winrm-hotfix" {
         $os_version_major = [Environment]::OSVersion.Version.Major
@@ -178,8 +176,54 @@ switch($action) {
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
+        Reboot-AndResume -action "update-wua"
+    }
+    "update-wua" {
+        $os_version_major = [Environment]::OSVersion.Version.Major
+        $os_version_minor = [Environment]::OSVersion.Version.Minor
+        $architecture = $env:PROCESSOR_ARCHITECTURE
+        $host_string = "$($os_version_major).$($os_version_minor)-$architecture"
+        Write-Log -message "updating the Windows Update Agent to the latest version with host string '$host_string'"
+
+        # urls are from https://support.microsoft.com/en-au/help/949104/how-to-update-the-windows-update-agent-to-the-latest-version
+        switch($host_string) {
+            "6.0-x86" {
+                $wua_url = "http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x86.exe"
+            }
+            "6.0-AMD64" {
+                $wua_url = "http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x64.exe"
+            }
+            "6.1-x86" {
+                $wua_url = "http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x86.exe"
+            }
+            "6.1-AMD64" {
+                $wua_url = "http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x64.exe"
+            }
+            "6.2-x86" {
+                $wua_url = "http://download.windowsupdate.com/c/msdownload/update/software/crup/2014/07/windows8-rt-kb2937636-x86_9c82bea917f34d581ab164eb08f93e2141412d7d.msu"
+            }
+            "6.2-AMD64" {
+                $wua_url = "http://download.windowsupdate.com/c/msdownload/update/software/crup/2014/07/windows8-rt-kb2937636-x64_29e0b587c8f09bcf635c1b79d09c00eef33113ec.msu"
+            }
+            default {
+                $wua_url = $null
+            }
+        }
+
+        if ($wua_url -ne $null) {
+            $wua_filename = $wua_url.Split("/")[-1]
+            $wua_file = "$tmp_dir\$wua_filename"
+            Download-File -url $wua_url -path $wua_file
+            $exit_code = Run-Process -executable $wua_file -arguments "/quiet /norestart"
+            if ($exit_code -ne 0 -and $exit_code -ne 3010) {
+                $error_message = "failed to install wua update: exit code $exit_code"
+                Write-Log -message $error_message -level "ERROR"
+                throw $error_message
+            }
+        } else {
+            Write-Log -message "could not match host string $host_string with wua update, assuming wua update isn't needed"
+        }
         Reboot-AndResume -action ""
-        break
     }
     default {
         # This would be the final task to run which downloads the Ansible
@@ -187,13 +231,17 @@ switch($action) {
         $url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
         $file = "$tmp_dir\ConfigureRemotingForAnsible.ps1"
         Download-File -url $url -path $file
-        $exit_code = Run-Process -executable "cmd.exe" -arguments "/c $env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -File $file"
+        $exit_code = Run-Process -executable "cmd.exe" -arguments "/c $env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File $file"
         if ($exit_code -ne 0) {
             $error_message = "failed to configure WinRM endpoint required by Ansible"
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
-        break
+
+        $reg_winlogon_path = "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        Write-Log -message "Removing AutoAdminLogon and DefaultUserName from reg path $reg_winlogon_path"
+        Remove-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon
+        Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultUserName
     }
 }
 

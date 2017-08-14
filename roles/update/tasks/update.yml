@@ -1,0 +1,23 @@
+---
+- name: check if there are missing updates
+  win_updates:
+    state: searched
+    log_path: c:\temp\win_updates-search.log
+  register: update_count
+
+- block:
+  - name: install windows updates
+    win_updates:
+      category_names:
+      - CriticalUpdates
+      - SecurityUpdates
+      - UpdateRollups
+      - Updates
+      log_path: c:\temp\win_updates-install.log
+    register: win_update_result
+  
+  - name: reboot server after update install
+    win_reboot:
+    when: win_update_result.reboot_required
+
+  when: update_count.found_update_count|int >= 1

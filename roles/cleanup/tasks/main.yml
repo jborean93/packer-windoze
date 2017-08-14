@@ -1,0 +1,58 @@
+---
+- name: cleanup the temp folders
+  win_file:
+    path: '{{item}}'
+    state: absent
+  with_items:
+  - C:\Temp
+  - C:\Windows\Panther
+  - C:\Windows\Temp
+  - C:\Windows\manifestcache
+
+- name: see if Optimize-Volume cmdlet is available
+  win_command: powershell.exe "Get-Command -Name Optimize-Volume"
+  register: defrag_cmdlet_available
+  failed_when: False
+
+- name: defrag C with PS cmdlet
+  win_command: powershell.exe "Optimize-Volume -DriveLetter C"
+  when: defrag_cmdlet_available.rc == 0
+
+- name: defrag C with legacy exe
+  win_command: 'Defrag.exe C: /H'
+  when: defrag_cmdlet_available.rc != 0
+
+- name: 0 out empty space for later compression
+  win_shell: |
+    $path = "C:\zero"
+    $volume = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'"
+    $block_size = 64kb
+    $leftover_size = $volume.Size * 0.05
+    $file_size = $volume.FreeSpace - $leftover_size
+    $data_array = New-Object -TypeName byte[]($block_size)
+
+    $stream = [System.IO.File]::OpenWrite($path)
+    try {
+        $current_file_size = 0
+        while ($current_file_size -lt $file_size) {
+            $stream.Write($data_array, 0, $data_array.Length)
+            $current_file_size += $data_array.Length
+        }
+    } finally {
+        if ($stream) {
+            $stream.Close()
+        }
+    }
+    Remove-Item -Path $path -Force | Out-Null
+
+- name: remove page file
+  win_regedit:
+    path: HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management
+    name: PagingFiles
+    data: ""
+    state: present
+  register: pagefile_removal
+
+- name: reboot server after clearing page file
+  win_reboot:
+  when: pagefile_removal|changed

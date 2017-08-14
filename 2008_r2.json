@@ -5,7 +5,8 @@
       "vboxmanage": [
         [ "modifyvm", "{{.Name}}", "--memory", "2048" ],
         [ "modifyvm", "{{.Name}}", "--vram", "48" ],
-        [ "modifyvm", "{{.Name}}", "--cpus", "2" ]
+        [ "modifyvm", "{{.Name}}", "--cpus", "2" ],
+        [ "modifyvm", "{{.Name}}", "--natpf1", "guest_winrm,tcp,,{{ user `host_forwarded_port` }},,5986" ]
       ],
       "guest_additions_mode": "disable",
       "guest_os_type": "{{ user `guest_os_type`}}",
@@ -22,16 +23,38 @@
       "winrm_use_ssl": true,
       "winrm_insecure": true,
 
-      "shutdown_command": "shutdown /s /t 0 /f /c \"Packer Shutdown\"",
+      "shutdown_command": "C:\\windows\\system32\\sysprep\\sysprep.exe /generalize /oobe /quiet /shutdown /unattend:C:\\Windows\\Panther\\Unattend\\unattend.xml",
       "shutdown_timeout": "15m",
       "floppy_files": [
-        "setup/answer/{{ user `host_type`}}/Autounattend.xml",
-        "setup/scripts/bootstrap.ps1"
+        "files/answer/{{ user `host_type` }}/Autounattend.xml",
+        "files/bootstrap.ps1"
       ]
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell-local",
+      "command": "printf '%s\n' '[windows]' '127.0.0.1' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port={{ user `host_forwarded_port` }}' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
+    },
+    {
+      "type": "shell-local",
+      "command": "ansible-playbook main.yml -i hosts-{{ user `host_type` }} -vv"
+    },
+    {
+      "type": "shell-local",
+      "command": "rm hosts-{{ user `host_type` }}"
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "keep_input_artifact": false,
+      "output": "{{ user `host_type` }}-{{.Provider}}.box"
     }
   ],
   "variables": {
     "host_type": "2008_r2",
+    "host_forwarded_port": "59862",
     "guest_os_type": "Windows2008_64",
     "headless": "false",
     "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008 R2.iso",
