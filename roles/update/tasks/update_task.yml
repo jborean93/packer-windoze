@@ -1,0 +1,30 @@
+---
+- name: check if there are missing updates - {{category_info.name}}
+  win_updates:
+    category_names:
+    - '{{category_info.name}}'
+    state: searched
+  register: update_count
+  when: category_info.finished == False
+
+- name: set no more update flag for {{category_info.name}} if not more updates and it isn't the 1st 2 iterations
+  set_fact:
+    update_stat: '{{update_stat|update_merge(category_info.name, True)}}'
+  when: update_count.found_update_count is defined and update_count.found_update_count == 0 and (loop_number != 1 and loop_number != 2)
+
+- name: block to install updates and reboot is required
+  block:
+  - name: install windows updates - {{category_info.name}}
+    win_updates:
+      category_names:
+      - '{{category_info.name}}'
+      state: installed
+      log_path: c:\temp\win_updates-install.log
+    ignore_errors: yes # get intermittent errors with this, usually 2nd round succeeds so let's ignore it
+    register: win_update_result
+
+  - name: reboot server after update install or there was a failure - {{category_info.name}}
+    win_reboot:
+    when: win_update_result|failed or win_update_result.reboot_required is defined and win_update_result.reboot_required == True
+
+  when: update_count.found_update_count is defined and update_count.found_update_count > 0

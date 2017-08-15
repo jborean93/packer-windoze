@@ -1,34 +1,17 @@
 ---
-- name: check if there are missing updates
+# run our customised update task for each category 
+- include_tasks: update_task.yml
+  with_items: '{{update_stat}}'
+  loop_control:
+    loop_var: category_info
+
+- name: run final update task at the end in case we missed anything
   win_updates:
-    category_names:
-    - '{{update_category}}'
-    state: searched
-  register: update_count
-  when: start_of_update == True or (update_count is not defined or (update_count.found_update_count is defined and update_count.found_update_count > 0))
+    category_names: '{{update_stat|categories_to_list}}'
+    state: installed
+  register: final_update
+  when: loop_number == 'end'
 
-- name: reset start_of_update fact as we have started
-  set_fact:
-    start_of_update: False
-  when: start_of_update == True
-
-- name: block to install updates and reboot is required
-  block:
-  - name: install windows updates
-    win_updates:
-      category_names:
-      - '{{update_category}}'
-      state: installed
-      log_path: c:\temp\win_updates-install.log
-    register: win_update_result
-  
-  - name: reboot server after update install
-    win_reboot:
-    when: win_update_result.reboot_required
-
-  when: update_count.found_update_count is defined and update_count.found_update_count > 0
-
-- name: fail if we are at the end of the loop and there are still updates left
-  fail:
-    msg: we have reached the end of the update loop and there are still updates left
-  when: item == 'end' and (update_count.found_update_count is defined and update_count.found_update_count > 0)
+- name: reboot after final update task
+  win_reboot:
+  when: final_update.reboot_required is defined and final_update.reboot_required == True

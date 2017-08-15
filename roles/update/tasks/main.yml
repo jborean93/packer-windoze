@@ -9,43 +9,28 @@
     var: windows_update_agent_version
 
 # This is a pretty ugly hack as there is no do until over a block of tasks. This
-# will loop over the update and reboot task 15 times to cover all updates, the
+# will loop over the update and reboot task 10 times to cover all updates, the
 # tasks in the loop are skipped when there are no updates which leads to a very
 # minimal loss of time when all the updates are installed and we are still
-# looping. We also set 'start_of_update' which forces the first check in each
-# loop to check if updates are available ignoring the previous loops results
+# looping.
+# We also set a dict that contains each category we loop through and whether we
+# have exhausted the updates for the respective category. This is only done
+# win_updates sometimes fails when too many updates need to be installed. This
+# way each update block is split into smaller chunks.
 - set_fact:
-    start_of_update: True
+    update_stat:
+    - name: CriticalUpdates
+      finished: False
+    - name: SecurityUpdates
+      finished: False
+    - name: Updates
+      finished: False
+    - name: UpdateRollups
+      finished: False
+    - name: FeaturePacks
+      finished: False
 
-- name: install CriticalUpdates
-  include_tasks: update.yml
-  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
-  var:
-    update_category: CriticalUpdates
-
-- set_fact:
-    start_of_update: True
-
-- name: install SecurityUpdates
-  include_tasks: update.yml
-  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
-  var:
-    update_category: SecurityUpdates
-
-- set_fact:
-    start_of_update: True
-
-- name: install Updates
-  include_tasks: update.yml
-  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
-  var:
-    update_category: Updates
-
-- set_fact:
-    start_of_update: True
-
-- name: install UpdateRollups
-  include_tasks: update.yml
-  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
-  var:
-    update_category: UpdateRollups
+- include_tasks: update.yml
+  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 'end']
+  loop_control:
+    loop_var: loop_number

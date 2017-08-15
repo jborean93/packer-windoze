@@ -5,3 +5,4 @@ hosts
 .DS_Store
 .vagrant/*
 *.box
+*.pyc
