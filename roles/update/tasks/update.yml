@@ -1,6 +1,7 @@
 ---
-# run our customised update task for each category 
-- include_tasks: update_task.yml
+# run our customised update task for each category
+- name: install updates - round {{loop_number}}
+  include_tasks: update_task.yml
   with_items: '{{update_stat}}'
   loop_control:
     loop_var: category_info
