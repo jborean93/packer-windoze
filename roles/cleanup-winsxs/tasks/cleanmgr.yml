@@ -1,0 +1,110 @@
+# Server 2008, 2008 R2 and 2012 don't have cleanmgr setup by default, this
+# needs to be copied from the relevant winsxs folder to it's intended location
+# before running.
+---
+- name: copy cleanmgr from winsxs Server 2008 32-bit
+  win_copy:
+    src: C:\Windows\WinSxS\x86_microsoft-windows-cleanmgr_31bf3856ad364e35_6.0.6001.18000_none_6d4436615d8bd133\cleanmgr.exe
+    dest: C:\Windows\System32\cleanmgr.exe
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.0-x86'
+
+- name: copy cleanmgr mui from winsxs Server 2008 32-bit
+  win_copy:
+    src: C:\Windows\WinSxS\x86_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.0.6001.18000_en-us_5dd66fed98a6c5bc\cleanmgr.exe.mui
+    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.0-x86'
+
+- name: copy cleanmgr from winsxs Server 2008 64-bit
+  win_copy:
+    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.0.6001.18000_none_c962d1e515e94269\cleanmgr.exe
+    dest: C:\Windows\System32\cleanmgr.exe
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.0-AMD64'
+
+- name: copy cleanmgr mui from winsxs Server 2008 64-bit
+  win_copy:
+    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.0.6001.18000_en-us_b9f50b71510436f2\cleanmgr.exe.mui
+    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.0-AMD64'
+
+- name: copy cleanmgr from winsxs Server 2008 R2
+  win_copy:
+    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.1.7600.16385_none_c9392808773cd7da\cleanmgr.exe
+    dest: C:\Windows\System32\cleanmgr.exe
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.1-AMD64'
+
+- name: copy cleanmgr mui from winsxs Server 2008 R2
+  win_copy:
+    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.1.7600.16385_en-us_b9cb6194b257cc63\cleanmgr.exe.mui
+    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.1-AMD64'
+
+# Cannot use win_hotfix as DISM cmdlets are not available with Server 2008 R2
+- name: check if Server 2008 R2 hotfix for Windows update cleanup is installed
+  win_command: DISM.exe /Online /Get-PackageInfo /PackageName:"Package_for_KB2852386~31bf3856ad364e35~amd64~~6.1.2.1"
+  register: dism_hotfix_check
+  when: os_version.stdout_lines[0] == '6.1-AMD64'
+  failed_when: False
+
+# only run if the hotfix above isn't installed for Server 2008 R2
+- block:
+  - name: download hotfix to enable Windows update cleanup
+    win_get_url:
+      url: https://download.microsoft.com/download/2/A/3/2A3FD850-E45F-47D4-AFF8-8048333CBA7D/Windows6.1-KB2852386-v2-x64.msu
+      dest: C:\temp\Windows6.1-KB2852386-v2-x64.msu
+  
+  - name: create expanded dir for msu hotfix
+    win_file:
+      path: C:\temp\KB2852386
+      state: directory
+
+  - name: extract cab from msu hotfix
+    win_command: 'expand C:\temp\Windows6.1-KB2852386-v2-x64.msu C:\temp\KB2852386 -F:*'
+  
+  - name: install hotfix with DISM exe
+    win_command: DISM.exe /Online /Add-Package /PackagePath:"C:\temp\KB2852386\Windows6.1-KB2852386-v2-x64.cab" /Quiet /NoRestart
+    register: dism_cleanup_hotfix
+    failed_when: dism_cleanup_hotfix.rc != 0 and dism_cleanup_hotfix.rc != 3010
+  
+  - name: reboot server after installing hotfix
+    win_reboot:
+  when: dism_hotfix_check is defined and dism_hotfix_check.rc != 0
+
+- name: copy cleanmgr from winsxs Server 2012
+  win_copy:
+    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.2.9200.16384_none_c60dddc5e750072a\cleanmgr.exe
+    dest: C:\Windows\System32\cleanmgr.exe
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.2-AMD64'
+
+- name: copy cleanmgr mui from winsxs Server 2012
+  win_copy:
+    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.2.9200.16384_en-us_b6a01752226afbb3\cleanmgr.exe.mui
+    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
+    remote_src: True
+  when: os_version.stdout_lines[0] == '6.2-AMD64'
+
+- name: run cleanmgr with everything set
+  block:
+  - name: set custom flags for cleanmgr run
+    win_shell: |
+      $volume_caches = Get-ChildItem -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+      foreach ($volume_cache in $volume_caches) {
+          New-ItemProperty -Path $volume_cache.PSPath -Name StateFlags0666 -Value 2 -Type DWORD -Force | Out-Null
+      }
+
+  - name: run cleanmgr with custom flag
+    win_command: cleanmgr.exe /sagerun:666
+  
+  always:
+  - name: clear custom flags after cleanmgr run
+    win_shell: |
+      $volume_caches = Get-ChildItem -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+      foreach ($volume_cache in $volume_caches) {
+          Remove-ItemProperty -Path $volume_cache.PSPath -Name StateFlags0666 -Force | Out-Null
+      }

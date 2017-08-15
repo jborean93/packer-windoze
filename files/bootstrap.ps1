@@ -59,8 +59,8 @@ Write-Log -message "starting bootstrap.ps1 with action '$action'"
 # powershell and finally default.
 #   1. 2008-sp2 - Installs SP2 on Server 2008, eval ISO do not have this pre-installed :( (Server 2008)
 #   2. powershell-2 - Installs Powershell 2.0 (Server 2008)
-#   3. dotnet - Installs .NET 4.5 required by Powershell 4.0 (Server 2008 and 2008 R2)
-#   4. powershell-4 - Installs Powershell 4.0 (Server 2008 and 2008 R2)
+#   3. dotnet - Installs .NET 4.5 required by Powershell 3.0 (Server 2008 and 2008 R2)
+#   4. powershell-3 - Installs Powershell 3.0 (Server 2008 and 2008 R2)
 #   5. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
 #   6. update-wua - Updates the windows update agent to the latest version (all)
 #   7. winrm-listener - Configures WinRM HTTP and HTTPS listener (all)
@@ -117,10 +117,10 @@ switch($action) {
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
-        Reboot-AndResume -action "powershell-4"
+        Reboot-AndResume -action "powershell-3"
     }
-    "powershell-4" {
-        Write-Log -message "running powershell update to version 4"
+    "powershell-3" {
+        Write-Log -message "running powershell update to version 3"
         $os_version_minor = [Environment]::OSVersion.Version.Minor
         $architecture = $env:PROCESSOR_ARCHITECTURE
         if ($architecture -eq "AMD64") {
@@ -128,18 +128,18 @@ switch($action) {
         } else {
             $architecture = "x86"
         }
-        
+
         if ($os_version_minor -eq 1) {
-            $url = "http://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-$($architecture).msu"
+            $url = "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-$($architecture).msu"
         } else {
-            $url = "http://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.0-KB2506146-$($architecture).msu"
+            $url = "https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.0-KB2506146-$($architecture).msu"
         }
         $filename = $url.Split("/")[-1]
         $file = "$tmp_dir\$filename"
         Download-File -url $url -path $file
         $exit_code = Run-Process -executable $file -arguments "/quiet /norestart"
         if ($exit_code -ne 0 -and $exit_code -ne 3010) {
-            $error_message = "failed to update Powershell to 4: exit code $exit_code"
+            $error_message = "failed to update Powershell to version 3: exit code $exit_code"
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }

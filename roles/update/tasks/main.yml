@@ -8,5 +8,44 @@
   debug:
     var: windows_update_agent_version
 
-- include_tasks: update.yml
-  until: update_count is defined and update_count.found_update_count|int >= 1
+# This is a pretty ugly hack as there is no do until over a block of tasks. This
+# will loop over the update and reboot task 15 times to cover all updates, the
+# tasks in the loop are skipped when there are no updates which leads to a very
+# minimal loss of time when all the updates are installed and we are still
+# looping. We also set 'start_of_update' which forces the first check in each
+# loop to check if updates are available ignoring the previous loops results
+- set_fact:
+    start_of_update: True
+
+- name: install CriticalUpdates
+  include_tasks: update.yml
+  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
+  var:
+    update_category: CriticalUpdates
+
+- set_fact:
+    start_of_update: True
+
+- name: install SecurityUpdates
+  include_tasks: update.yml
+  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
+  var:
+    update_category: SecurityUpdates
+
+- set_fact:
+    start_of_update: True
+
+- name: install Updates
+  include_tasks: update.yml
+  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
+  var:
+    update_category: Updates
+
+- set_fact:
+    start_of_update: True
+
+- name: install UpdateRollups
+  include_tasks: update.yml
+  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 'end']
+  var:
+    update_category: UpdateRollups

@@ -11,7 +11,7 @@
     register: os_version
 
   roles:
-  #- update # TODO: get the rest of the cleanup working before takling this beast
+  - update # TODO: get the rest of the cleanup working before takling this beast
   - cleanup-winsxs
   - cleanup-features
   - cleanup

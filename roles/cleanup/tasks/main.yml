@@ -20,10 +20,12 @@
   - C:\Windows\Panther
   - C:\Windows\Temp
 
-# remove files in C:\Windows\winsxs\ManifestCache (not folder)
-# Takeown /f %windir%\winsxs\ManifestCache\*
-# Icacls %windir%\winsxs\ManifestCache\* /GRANT administrators:F
-# Del /q %windir%\winsxs\ManifestCache\*
+# we want to clear the folder contents and not the folder itself
+- name: clear out the WinSXS ManifestCache folder
+  win_shell: |
+    &cmd.exe /c Takeown /f %windir%\winsxs\ManifestCache\*
+    &cmd.exe /c Icacls %windir%\winsxs\ManifestCache\* /GRANT administrators:F
+    &cmd.exe /c Del /q %windir%\winsxs\ManifestCache\*
 
 - name: see if Optimize-Volume cmdlet is available
   win_command: powershell.exe "Get-Command -Name Optimize-Volume"
