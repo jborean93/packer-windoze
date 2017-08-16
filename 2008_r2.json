@@ -6,7 +6,8 @@
         [ "modifyvm", "{{.Name}}", "--memory", "2048" ],
         [ "modifyvm", "{{.Name}}", "--vram", "48" ],
         [ "modifyvm", "{{.Name}}", "--cpus", "2" ],
-        [ "modifyvm", "{{.Name}}", "--natpf1", "guest_winrm,tcp,,{{ user `host_forwarded_port` }},,5986" ]
+        [ "modifyvm", "{{.Name}}", "--nic2", "hostonly" ],
+        [ "modifyvm", "{{.Name}}", "--hostonlyadapter2" ,"vboxnet0" ]
       ],
       "guest_additions_mode": "disable",
       "guest_os_type": "{{ user `guest_os_type`}}",
@@ -23,18 +24,26 @@
       "winrm_use_ssl": true,
       "winrm_insecure": true,
 
-      "shutdown_command": "C:\\windows\\system32\\sysprep\\sysprep.exe /generalize /oobe /quiet /shutdown /unattend:C:\\Windows\\Panther\\Unattend\\unattend.xml",
+      "shutdown_command": "a:\\sysprep-shutdown.bat",
       "shutdown_timeout": "15m",
       "floppy_files": [
         "files/answer/{{ user `host_type` }}/Autounattend.xml",
-        "files/bootstrap.ps1"
+        "files/bootstrap.ps1",
+        "files/sysprep-shutdown.bat"
       ]
     }
   ],
   "provisioners": [
     {
+      "type": "powershell",
+      "inline": [
+        "netsh interface ip set address 'Local Area Connection 2' static {{ user `host_ip` }} 255.255.255.0 192.168.56.100",
+        "netsh interface ip add dns 'Local Area Connection 2' 8.8.8.8"
+      ]
+    },
+    {
       "type": "shell-local",
-      "command": "printf '%s\n' '[windows]' '127.0.0.1' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port={{ user `host_forwarded_port` }}' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
+      "command": "printf '%s\n' '[windows]' '{{ user `host_ip` }}' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port=5986' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
     },
     {
       "type": "shell-local",
@@ -54,11 +63,11 @@
   ],
   "variables": {
     "host_type": "2008_r2",
-    "host_forwarded_port": "59862",
+    "host_ip": "192.168.56.112",
     "guest_os_type": "Windows2008_64",
     "headless": "false",
     "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008 R2.iso",
-    "iiso_url": "https://download.microsoft.com/download/7/5/E/75EC4E54-5B02-42D6-8879-D8D3A25FBEF7/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso",
+    "actual_iso_url": "https://download.microsoft.com/download/7/5/E/75EC4E54-5B02-42D6-8879-D8D3A25FBEF7/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso",
     "iso_checksum": "4263be2cf3c59177c45085c0a7bc6ca5",
     "iso_checksum_type": "md5"
   }

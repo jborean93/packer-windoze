@@ -14,7 +14,7 @@
 
 - name: template the unattend.xml file
   win_template:
-    src: unattend.xml.tmpl
+    src: '{{os_version.stdout_lines[0]}}.xml.tmpl'
     dest: C:\Windows\Panther\Unattend\unattend.xml
 
 - name: set flag to recreate pagefile after next sysprep

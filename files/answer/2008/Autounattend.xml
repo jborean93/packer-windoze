@@ -23,14 +23,11 @@
         <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <DiskConfiguration>
                 <Disk wcm:action="add">
+                    <DiskID>0</DiskID>
+                    <WillWipeDisk>true</WillWipeDisk>
                     <CreatePartitions>
                         <CreatePartition wcm:action="add">
-                            <Type>Primary</Type>
                             <Order>1</Order>
-                            <Size>350</Size>
-                        </CreatePartition>
-                        <CreatePartition wcm:action="add">
-                            <Order>2</Order>
                             <Type>Primary</Type>
                             <Extend>true</Extend>
                         </CreatePartition>
@@ -39,20 +36,12 @@
                         <ModifyPartition wcm:action="add">
                             <Active>true</Active>
                             <Format>NTFS</Format>
-                            <Label>boot</Label>
+                            <Label>Windows 2008</Label>
+                            <Letter>C</Letter>
                             <Order>1</Order>
                             <PartitionID>1</PartitionID>
                         </ModifyPartition>
-                        <ModifyPartition wcm:action="add">
-                            <Format>NTFS</Format>
-                            <Label>Windows 2008</Label>
-                            <Letter>C</Letter>
-                            <Order>2</Order>
-                            <PartitionID>2</PartitionID>
-                        </ModifyPartition>
                     </ModifyPartitions>
-                    <DiskID>0</DiskID>
-                    <WillWipeDisk>true</WillWipeDisk>
                 </Disk>
             </DiskConfiguration>
             <ImageInstall>
@@ -65,7 +54,7 @@
                     </InstallFrom>
                     <InstallTo>
                         <DiskID>0</DiskID>
-                        <PartitionID>2</PartitionID>
+                        <PartitionID>1</PartitionID>
                     </InstallTo>
                 </OSImage>
             </ImageInstall>
@@ -131,13 +120,12 @@
                 </Password>
             </AutoLogon>
             <FirstLogonCommands>
-                <!-- Probably need to Install Powershell separately before I can run the below -->
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>cmd.exe /c c:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted"</CommandLine>
                     <Order>1</Order>
                 </SynchronousCommand>
                 <!-- Server 2008 R2 needs to install .NET 4.5 and Powershell, start from dotnet action in bootstrap.ps1 -->
-                <SynchronousCommand wcm:action="add">
+                <SynchronousCommand wcm:action="add">>
                     <CommandLine>cmd.exe /c c:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe a:\bootstrap.ps1 2008-sp2</CommandLine>
                     <Order>2</Order>
                 </SynchronousCommand>

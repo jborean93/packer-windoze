@@ -73,7 +73,7 @@
   
   - name: reboot server after installing hotfix
     win_reboot:
-  when: dism_hotfix_check is defined and dism_hotfix_check.rc != 0
+  when: dism_hotfix_check.rc is defined and dism_hotfix_check.rc != 0
 
 - name: copy cleanmgr from winsxs Server 2012
   win_copy:

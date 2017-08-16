@@ -23,11 +23,13 @@
 
 - name: run DISM to clear service packs when not Server 2008
   win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded
-  when: os_version.stdout_lines[0] != '6.0-x86' or os_version.stdout_lines[0] != '6.0-AMD64'
+  when: os_version.stdout_lines[0] != '6.0-x86' and os_version.stdout_lines[0] != '6.0-AMD64'
 
 - name: run compcln to clear service packs for Server 2008
   win_command: compcln.exe /quiet
+  register: compcln_result
   when: os_version.stdout_lines[0] == '6.0-x86' or os_version.stdout_lines[0] == '6.0-AMD64'
+  failed_when: compcln_result.rc != 0 and compcln_result.rc != -2147467259 # 0 is good the other is already run
 
 - name: setup and run cleanmgr if DISM reset base wasn't supported
   include_tasks: cleanmgr.yml
