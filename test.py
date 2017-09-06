@@ -1,0 +1,26 @@
+from winrm.protocol import Protocol
+
+p = Protocol(
+    endpoint='https://192.168.56.111:5986/wsman',
+    transport='ntlm',
+    username=r'vagrant',
+    password='vagrant',
+    server_cert_validation='ignore')
+
+shell_id = p.open_shell()
+command = "powershell.exe"
+arguments = ["-ExecutionPolicy", "ByPass", "-EncodedCommand", "JABFAHIAcgBvAHIAQQBjAHQAaQBvAG4AUAByAGUAZgBlAHIAZQBuAGMAZQAgAD0AIAAnAFMAdABvAHAAJwANAAoADQAKACQAcAByAG8AYwBlAHMAcwBfAGMAbwB1AG4AdAAgAD0AIAAoAEcAZQB0AC0AQwBpAG0ASQBuAHMAdABhAG4AYwBlACAALQBDAGwAYQBzAHMATgBhAG0AZQAgAFcAaQBuADMAMgBfAFAAcgBvAGMAZQBzAHMAIAAtAEYAaQBsAHQAZQByACAAIgBOAGEAbQBlACAAPQAgACcATABvAGcAbwBuAFUASQAuAGUAeABlACcAIgAgAHwAIABNAGUAYQBzAHUAcgBlAC0ATwBiAGoAZQBjAHQAKQAuAEMAbwB1AG4AdAANAAoAJABpAG4AdABlAHIAYQBjAHQAaQB2AGUAXwBzAGUAcwBzAGkAbwBuAHMAIAA9ACAAKABHAGUAdAAtAEMAaQBtAEkAbgBzAHQAYQBuAGMAZQAgAC0AQwBsAGEAcwBzAE4AYQBtAGUAIABXAGkAbgAzADIAXwBMAG8AZwBvAG4AUwBlAHMAcwBpAG8AbgAgAC0ARgBpAGwAdABlAHIAIAAiAEwAbwBnAG8AbgBUAHkAcABlACAAPQAgADIAIgAgAHwAIABNAGUAYQBzAHUAcgBlAC0ATwBiAGoAZQBjAHQAKQAuAEMAbwB1AG4AdAANAAoADQAKAFcAcgBpAHQAZQAtAEgAbwBzAHQAIAAiAEwAbwBnAG8AbgBVAEkAIABQAHIAbwBjAGUAcwBzACAAYwBvAHUAbgB0ADoAIAAkAHAAcgBvAGMAZQBzAHMAXwBjAG8AdQBuAHQAIgANAAoAVwByAGkAdABlAC0ASABvAHMAdAAgACIASQBuAHQAZQByAGEAYwB0AGkAdgBlACAAUwBlAHMAcwBpAG8AbgBzACAAYwBvAHUAbgB0ADoAIAAkAGkAbgB0AGUAcgBhAGMAdABpAHYAZQBfAHMAZQBzAHMAaQBvAG4AcwAiAA0ACgA="]
+
+command_id = p.run_command(shell_id, command, arguments)
+std_out, std_err, status_code = p.get_command_output(shell_id, command_id)
+p.cleanup_command(shell_id, command_id)
+p.close_shell(shell_id)
+
+print("STDOUT")
+print(std_out)
+
+print("STDERR")
+print(std_err)
+
+print("RC")
+print(status_code)

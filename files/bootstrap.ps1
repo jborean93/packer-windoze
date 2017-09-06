@@ -59,11 +59,12 @@ Write-Log -message "starting bootstrap.ps1 with action '$action'"
 # powershell and finally default.
 #   1. 2008-sp2 - Installs SP2 on Server 2008, eval ISO do not have this pre-installed :( (Server 2008)
 #   2. powershell-2 - Installs Powershell 2.0 (Server 2008)
-#   3. dotnet - Installs .NET 4.5 required by Powershell 3.0 (Server 2008 and 2008 R2)
-#   4. powershell-3 - Installs Powershell 3.0 (Server 2008 and 2008 R2)
-#   5. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
-#   6. update-wua - Updates the windows update agent to the latest version (all)
-#   7. winrm-listener - Configures WinRM HTTP and HTTPS listener (all)
+#   3. ie9 - Installs IE9, seems to fail with win_updates (Server 2008)
+#   4. dotnet - Installs .NET 4.5 required by Powershell 3.0 (Server 2008 and 2008 R2)
+#   5. powershell-3 - Installs Powershell 3.0 (Server 2008 and 2008 R2)
+#   6. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
+#   7. update-wua - Updates the windows update agent to the latest version (all)
+#   8. winrm-listener - Configures WinRM HTTP and HTTPS listener and enables RDP with NLA (all)
 #
 # These are all actions that need to be run before Ansible can talk to the host
 # the older the OS the more tasks that need to be run
@@ -101,6 +102,24 @@ switch($action) {
         $exit_code = Run-Process -executable $ps_file -arguments "/quiet /norestart"
         if ($exit_code -ne 0 -and $exit_code -ne 3010) {
             $error_message = "failed to update Powershell from 1.0 to 2.0: exit code $exit_code"
+            Write-Log -message $error_message -level "ERROR"
+            throw $error_message
+        }
+        Reboot-AndResume -action "ie9"
+    }
+    "ie9" {
+        Write-Log -message "install Internet Explorer 9"
+        $architecture = $env:PROCESSOR_ARCHITECTURE
+        if ($architecture -eq "AMD64") {
+            $url = "http://download.windowsupdate.com/msdownload/update/software/uprl/2011/03/wu-ie9-windowsvista-x64_f599c02e7e1ea8a4e1029f0e49418a8be8416367.exe"
+        } else {
+            $url = "http://download.windowsupdate.com/msdownload/update/software/updt/2011/03/wu-ie9-windowsvista-x86_a2b66ff9e9affda9675dd85ba2b637a882979a25.exe"
+        }
+        $file = "$tmp_dir\wu-ie9-windowsvista.exe"
+        Download-File -url $url -path $file
+        $exit_code = Run-Process -executable $file -arguments "/quiet /norestart"
+        if ($exit_code -ne 0 -and $exit_code -ne 3010) {
+            $error_message = "failed to install Internet Explorer 9: exit code $exit_code"
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
@@ -251,8 +270,7 @@ switch($action) {
         Reboot-AndResume -action "winrm-listener"
     }
     "winrm-listener" {
-        # This would be the final task to run which downloads the Ansible
-        # WinRM configuration script and runs it
+        Write-Log -message "downloading WinRM config script and enabling the protocol"
         $url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
         $file = "$tmp_dir\ConfigureRemotingForAnsible.ps1"
         Download-File -url $url -path $file
@@ -263,6 +281,26 @@ switch($action) {
             throw $error_message
         }
 
+        Write-Log -message "enabling RDP"
+        $rdp_wmi = Get-CimInstance -ClassName Win32_TerminalServiceSetting -Namespace root\CIMV2\TerminalServices
+        $rdp_enable = $rdp_wmi | Invoke-CimMethod -MethodName SetAllowTSConnections -Arguments @{ AllowTSConnections = 1; ModifyFirewallException = 1 }
+        if ($rdp_enable.ReturnValue -ne 0) {
+            $error_message = "failed to change RDP connection settings, error code: $($rdp_enable.ReturnValue)"
+            Write-Log -message $error_message -level "ERROR"
+            throw $error_message
+        }
+
+        Write-Log -message "enabling NLA authentication for RDP"
+        $nla_wmi = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace root\CIMV2\TerminalServices
+        $nla_wmi | Invoke-CimMethod -MethodName SetUserAuthenticationRequired -Arguments @{ UserAuthenticationRequired = 1 } | Out-Null
+        $nla_wmi = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace root\CIMV2\TerminalServices
+        if ($nla_wmi.UserAuthenticationRequired -ne 1) {
+            $error_message = "failed to enable NLA"
+            Write-Log -message $error_message -level "ERROR"
+            throw $error_message
+        }
+        
+        Write-Log -message "disabling the auto login now that bootstrapping is complete"
         $reg_winlogon_path = "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
         Write-Log -message "Removing AutoAdminLogon and DefaultUserName from reg path $reg_winlogon_path"
         Remove-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon

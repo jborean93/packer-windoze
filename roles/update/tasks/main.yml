@@ -1,12 +1,15 @@
 ---
-- name: get windows update agent version for debugging purposes
-  win_file_version:
-    path: C:\Windows\System32\wuaueng.dll
-  register: windows_update_agent_version
-
-- name: windows update agent version
-  debug:
-    var: windows_update_agent_version
+- name: enable verbose logging (WUA seems to fail on some installs without this)
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Trace
+    name: '{{item.name}}'
+    data: '{{item.data}}'
+    type: dword
+  with_items:
+  - name: Flags
+    data: 7
+  - name: Level
+    data: 4
 
 # This is a pretty ugly hack as there is no do until over a block of tasks. This
 # will loop over the update and reboot task 10 times to cover all updates, the
@@ -34,3 +37,14 @@
   with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 'end']
   loop_control:
     loop_var: loop_number
+
+- name: remove verbose Windows Update logging
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Trace
+    state: absent
+    delete_key: yes
+
+- name: clear update log after it blew up from the above
+  win_file:
+    path: C:\Windows\WindowsUpdate.log
+    state: absent

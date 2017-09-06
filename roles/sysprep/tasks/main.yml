@@ -17,6 +17,36 @@
     src: '{{os_version.stdout_lines[0]}}.xml.tmpl'
     dest: C:\Windows\Panther\Unattend\unattend.xml
 
+- name: copy across the sysprep powershell script
+  win_copy:
+    src: sysprep.ps1
+    dest: C:\temp\sysprep.ps1
+
+- name: add auto logon details so once vagrant initialises it auto logs in
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon
+    name: '{{item.name}}'
+    data: '{{item.data}}'
+    type: string
+    state: present
+  with_items:
+  - name: DefaultUserName
+    data: '{{ansible_user}}'
+  - name: DefaultPassword
+    data: '{{ansible_password}}'
+  - name: AutoAdminLogon
+    data: '1'
+  - name: ForceAutoLogon
+    data: '1'
+
+- name: add run once script to once vagrant initialises it runs the sysprep
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+    name: sysprep
+    data: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -File C:\temp\sysprep.ps1
+    type: string
+    state: present
+
 - name: set flag to recreate pagefile after next sysprep
   win_shell: |
     $system = Get-WmiObject -Class Win32_ComputerSystem -EnableAllPrivileges

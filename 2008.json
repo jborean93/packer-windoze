@@ -24,12 +24,12 @@
         "winrm_use_ssl": true,
         "winrm_insecure": true,
   
-        "shutdown_command": "a:\\sysprep-shutdown.bat",
+        "shutdown_command": "a:\\packer-shutdown.bat",
         "shutdown_timeout": "15m",
         "floppy_files": [
           "files/answer/{{ user `host_type` }}/Autounattend.xml",
           "files/bootstrap.ps1",
-          "files/sysprep-shutdown.bat"
+          "files/packer-shutdown.bat"
         ]
       }
     ],
@@ -66,10 +66,9 @@
       "host_ip": "192.168.56.111",
       "guest_os_type": "Windows2008_64",
       "headless": "false",
-      "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008.iso",
-      "actual_iso_url": "https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.exe",
+      "iso_url": "/Users/jborean/Documents/iso/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.iso",
+      "actual_iso_url": "https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.exe - note you need a windows box to extract this",
       "iso_checksum": "0477c88678efb8ebc5cd7a9e9efd8b82",
       "iso_checksum_type": "md5"
     }
   }
-  

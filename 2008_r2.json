@@ -24,7 +24,7 @@
       "winrm_use_ssl": true,
       "winrm_insecure": true,
 
-      "shutdown_command": "a:\\sysprep-shutdown.bat",
+      "shutdown_command": "shutdown /s /t 0",
       "shutdown_timeout": "15m",
       "floppy_files": [
         "files/answer/{{ user `host_type` }}/Autounattend.xml",
