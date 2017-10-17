@@ -6,8 +6,7 @@
         [ "modifyvm", "{{.Name}}", "--memory", "2048" ],
         [ "modifyvm", "{{.Name}}", "--vram", "48" ],
         [ "modifyvm", "{{.Name}}", "--cpus", "2" ],
-        [ "modifyvm", "{{.Name}}", "--nic2", "hostonly" ],
-        [ "modifyvm", "{{.Name}}", "--hostonlyadapter2" ,"vboxnet0" ]
+        [ "modifyvm", "{{.Name}}", "--natpf1", "winrm,tcp,127.0.0.1,{{ user `winrm_forwarded_port` }},,5986" ]
       ],
       "guest_additions_mode": "disable",
       "guest_os_type": "{{ user `guest_os_type`}}",
@@ -24,26 +23,18 @@
       "winrm_use_ssl": true,
       "winrm_insecure": true,
 
-      "shutdown_command": "shutdown /s /t 0",
+      "shutdown_command": "schtasks.exe /Run /TN \"packer-shutdown\"",
       "shutdown_timeout": "15m",
       "floppy_files": [
         "files/answer/{{ user `host_type` }}/Autounattend.xml",
-        "files/bootstrap.ps1",
-        "files/packer-shutdown.bat"
+        "files/bootstrap.ps1"
       ]
     }
   ],
   "provisioners": [
     {
-      "type": "powershell",
-      "inline": [
-        "netsh interface ip set address 'Local Area Connection 2' static {{ user `host_ip` }} 255.255.255.0 192.168.56.100",
-        "netsh interface ip add dns 'Local Area Connection 2' 8.8.8.8"
-      ]
-    },
-    {
       "type": "shell-local",
-      "command": "printf '%s\n' '[windows]' '{{ user `host_ip` }}' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port=5986' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
+      "command": "printf '%s\n' '[windows]' '127.0.0.1' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port={{ user `winrm_forwarded_port` }}' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
     },
     {
       "type": "shell-local",
@@ -63,7 +54,7 @@
   ],
   "variables": {
     "host_type": "2016",
-    "host_ip": "192.168.56.115",
+    "winrm_forwarded_port": "55986",
     "guest_os_type": "Windows2016_64",
     "headless": "false",
     "iso_url": "/Users/jborean/Downloads/14393.0.161119-1705.RS1_REFRESH_SERVER_EVAL_X64FRE_EN-US.ISO",

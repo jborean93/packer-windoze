@@ -11,11 +11,11 @@
     register: os_version
 
   roles:
-  #- update
-  #- cleanup-winsxs
-  #- cleanup-features
-  #- cleanup
-  #- sysprep
+  - update
+  - cleanup-winsxs
+  - cleanup-features
+  - cleanup
+  - sysprep
 
   # To add
   # Show hidden files

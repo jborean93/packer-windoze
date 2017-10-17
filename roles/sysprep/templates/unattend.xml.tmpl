@@ -6,7 +6,9 @@
         </component>
         <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <PersistAllDeviceInstalls>false</PersistAllDeviceInstalls>
+{% if os_version.stdout_lines[0] != "6.0-AMD64" %}
             <DoNotCleanUpNonPresentDevices>false</DoNotCleanUpNonPresentDevices>
+{% endif %}
         </component>
     </settings>
     <settings pass="oobeSystem">
@@ -21,9 +23,14 @@
                 <HideEULAPage>true</HideEULAPage>
                 <ProtectYourPC>1</ProtectYourPC>
                 <NetworkLocation>Home</NetworkLocation>
+{% if os_version.stdout_lines[0] != "6.0-AMD64" %}
                 <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+{% endif %}
             </OOBE>
             <TimeZone>UTC</TimeZone>
+{% if os_version.stdout_lines[0] == "6.0-AMD64" %}
+            <ComputerName>*</ComputerName>
+{% endif %}
             <UserAccounts>
                 <AdministratorPassword>
                     <Value>{{ansible_password}}</Value>
@@ -42,14 +49,36 @@
                     </LocalAccount>
                 </LocalAccounts>
             </UserAccounts>
+            <AutoLogon>
+                <Enabled>true</Enabled>
+                <Username>{{ansible_user}}</Username>
+                <Password>
+                    <Value>{{ansible_password}}</Value>
+                    <PlainText>true</PlainText>
+                </Password>
+            </AutoLogon>
             <FirstLogonCommands>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c c:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File C:\temp\ConfigureRemotingForAnsible.ps1 -EnableCredSSP -ForceNewSSLCert</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass -File C:\temp\setup.ps1</CommandLine>
                     <Order>1</Order>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass "Remove-Item -Path C:\temp -Force -Recurse; New-Item -Path C:\temp -ItemType Path"</CommandLine>
+                    <Order>2</Order>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>cmd.exe /c logoff</CommandLine>
+                    <Order>3</Order>
                 </SynchronousCommand>
             </FirstLogonCommands>
         </component>
     </settings>
     <settings pass="specialize">
+{% if os_version.stdout_lines[0] == "6.0-AMD64" %}
+        <!-- Server 2008 requires this to stop asking for the Computer Name after sysprep -->
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <ComputerName>*</ComputerName>
+        </component>
+{% endif %}
     </settings>
 </unattend>

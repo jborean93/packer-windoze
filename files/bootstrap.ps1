@@ -314,12 +314,6 @@ switch($action) {
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
-        
-        Write-Log -message "disabling the auto login now that bootstrapping is complete"
-        $reg_winlogon_path = "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon"
-        Write-Log -message "Removing AutoAdminLogon and DefaultUserName from reg path $reg_winlogon_path"
-        Remove-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon
-        Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultUserName
     }
     default {
         $error_message = "invalid action '$action', cannot continue"
