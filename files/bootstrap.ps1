@@ -55,16 +55,17 @@ if (-not (Test-Path -Path $tmp_dir)) {
 Write-Log -message "starting bootstrap.ps1 with action '$action'"
 
 # there are 4 actions the boostrap script can run, the subsequent actions are
-# run based on where it is started, e.g. 2008-sp2 goes to dotnet which goes to
-# powershell and finally default.
+# run based on where it is started, e.g. 2008-sp2 goes to powershell-2 which
+# goes to ie9 and continues until the WinRM listener is started
 #   1. 2008-sp2 - Installs SP2 on Server 2008, eval ISO do not have this pre-installed :( (Server 2008)
 #   2. powershell-2 - Installs Powershell 2.0 (Server 2008)
 #   3. ie9 - Installs IE9, seems to fail with win_updates (Server 2008)
 #   4. dotnet - Installs .NET 4.5 required by Powershell 3.0 (Server 2008 and 2008 R2)
 #   5. powershell-3 - Installs Powershell 3.0 (Server 2008 and 2008 R2)
-#   6. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
-#   7. update-wua - Updates the windows update agent to the latest version (all)
-#   8. winrm-listener - Configures WinRM HTTP and HTTPS listener and enables RDP with NLA (all)
+#   6. tiworker-fix - Installs a fix for TiWorker taking up too much memory (Server 2012)
+#   7. winrm-hotfix - Installs hotfix that solves OutOfMemoryIssues winrm (Server 2008, 2008 R2, 2012 and 7)
+#   8. update-wua - Updates the windows update agent to the latest version (all)
+#   9. winrm-listener - Configures WinRM HTTP and HTTPS listener and enables RDP with NLA (all)
 #
 # These are all actions that need to be run before Ansible can talk to the host
 # the older the OS the more tasks that need to be run
@@ -159,6 +160,20 @@ switch($action) {
         $exit_code = Run-Process -executable $file -arguments "/quiet /norestart"
         if ($exit_code -ne 0 -and $exit_code -ne 3010) {
             $error_message = "failed to update Powershell to version 3: exit code $exit_code"
+            Write-Log -message $error_message -level "ERROR"
+            throw $error_message
+        }
+        Reboot-AndResume -action "winrm-hotfix"
+    }
+    "tiworker-fix" {
+        # TODO: see if killing TiWorker.exe before running speeds this up
+        Write-Log -message "installing KB2771431 to fix unresponsive TiWorker"
+        $url = "https://download.microsoft.com/download/D/D/C/DDC353A0-A56D-48E8-B2C0-97615C503145/Windows8-RT-KB2771431-x64.msu"
+        $file = "$tmp_dir\Windows8-RT-KB2771431-x64.msu"
+        Download-File -url $url -path $file
+        $exit_code = Run-Process -executable $file -arguments "/quiet /norestart"
+        if ($exit_code -ne 0 -and $exit_code -ne 3010) {
+            $error_message = "failed to install KB2771431 for Server 2012 to fix TiWorker issues: exit code $exit_code"
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
@@ -274,7 +289,7 @@ switch($action) {
         $url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
         $file = "$tmp_dir\ConfigureRemotingForAnsible.ps1"
         Download-File -url $url -path $file
-        $exit_code = Run-Process -executable "cmd.exe" -arguments "/c $env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe $file"
+        $exit_code = Run-Process -executable "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -arguments "-File $file"
         if ($exit_code -ne 0) {
             $error_message = "failed to configure WinRM endpoint required by Ansible"
             Write-Log -message $error_message -level "ERROR"

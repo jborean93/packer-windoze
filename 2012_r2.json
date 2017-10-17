@@ -43,13 +43,13 @@
     }
   ],
   "variables": {
-    "host_type": "2008_r2",
-    "host_ip": "192.168.56.112",
-    "guest_os_type": "Windows2008_64",
+    "host_type": "2012_r2",
+    "host_ip": "192.168.56.114",
+    "guest_os_type": "Windows2012_64",
     "headless": "false",
-    "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008 R2.iso",
-    "actual_iso_url": "https://download.microsoft.com/download/7/5/E/75EC4E54-5B02-42D6-8879-D8D3A25FBEF7/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso",
-    "iso_checksum": "4263be2cf3c59177c45085c0a7bc6ca5",
+    "iso_url": "/Users/jborean/Downloads/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO",
+    "actual_iso_url": "http://care.dlservice.microsoft.com/dl/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO",
+    "iso_checksum": "5b5e08c490ad16b59b1d9fab0def883a",
     "iso_checksum_type": "md5"
   }
 }

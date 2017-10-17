@@ -121,12 +121,12 @@
             </AutoLogon>
             <FirstLogonCommands>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c c:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted"</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted"</CommandLine>
                     <Order>1</Order>
                 </SynchronousCommand>
                 <!-- Server 2008 R2 needs to install .NET 4.5 and Powershell, start from dotnet action in bootstrap.ps1 -->
                 <SynchronousCommand wcm:action="add">>
-                    <CommandLine>cmd.exe /c c:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe a:\bootstrap.ps1 2008-sp2</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe a:\bootstrap.ps1 2008-sp2</CommandLine>
                     <Order>2</Order>
                 </SynchronousCommand>
             </FirstLogonCommands>

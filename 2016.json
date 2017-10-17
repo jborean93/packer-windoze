@@ -34,6 +34,25 @@
     }
   ],
   "provisioners": [
+    {
+      "type": "powershell",
+      "inline": [
+        "netsh interface ip set address 'Local Area Connection 2' static {{ user `host_ip` }} 255.255.255.0 192.168.56.100",
+        "netsh interface ip add dns 'Local Area Connection 2' 8.8.8.8"
+      ]
+    },
+    {
+      "type": "shell-local",
+      "command": "printf '%s\n' '[windows]' '{{ user `host_ip` }}' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port=5986' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
+    },
+    {
+      "type": "shell-local",
+      "command": "ansible-playbook main.yml -i hosts-{{ user `host_type` }} -vv"
+    },
+    {
+      "type": "shell-local",
+      "command": "rm hosts-{{ user `host_type` }}"
+    }
   ],
   "post-processors": [
     {
@@ -43,13 +62,13 @@
     }
   ],
   "variables": {
-    "host_type": "2008_r2",
-    "host_ip": "192.168.56.112",
-    "guest_os_type": "Windows2008_64",
+    "host_type": "2016",
+    "host_ip": "192.168.56.115",
+    "guest_os_type": "Windows2016_64",
     "headless": "false",
-    "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008 R2.iso",
-    "actual_iso_url": "https://download.microsoft.com/download/7/5/E/75EC4E54-5B02-42D6-8879-D8D3A25FBEF7/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso",
-    "iso_checksum": "4263be2cf3c59177c45085c0a7bc6ca5",
+    "iso_url": "/Users/jborean/Downloads/14393.0.161119-1705.RS1_REFRESH_SERVER_EVAL_X64FRE_EN-US.ISO",
+    "actual_iso_url": "http://care.dlservice.microsoft.com/dl/download/1/4/9/149D5452-9B29-4274-B6B3-5361DBDA30BC/14393.0.161119-1705.RS1_REFRESH_SERVER_EVAL_X64FRE_EN-US.ISO",
+    "iso_checksum": "70721288bbcdfe3239d8f8c0fae55f1f",
     "iso_checksum_type": "md5"
   }
 }

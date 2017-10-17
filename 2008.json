@@ -34,25 +34,6 @@
       }
     ],
     "provisioners": [
-      {
-        "type": "powershell",
-        "inline": [
-          "netsh interface ip set address 'Local Area Connection 2' static {{ user `host_ip` }} 255.255.255.0 192.168.56.100",
-          "netsh interface ip add dns 'Local Area Connection 2' 8.8.8.8"
-        ]
-      },
-      {
-        "type": "shell-local",
-        "command": "printf '%s\n' '[windows]' '{{ user `host_ip` }}' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port=5986' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
-      },
-      {
-        "type": "shell-local",
-        "command": "ansible-playbook main.yml -i hosts-{{ user `host_type` }} -vv"
-      },
-      {
-        "type": "shell-local",
-        "command": "rm hosts-{{ user `host_type` }}"
-      }
     ],
     "post-processors": [
       {
@@ -66,7 +47,7 @@
       "host_ip": "192.168.56.111",
       "guest_os_type": "Windows2008_64",
       "headless": "false",
-      "iso_url": "/Users/jborean/Documents/iso/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.iso",
+      "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008.iso",
       "actual_iso_url": "https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.exe - note you need a windows box to extract this",
       "iso_checksum": "0477c88678efb8ebc5cd7a9e9efd8b82",
       "iso_checksum_type": "md5"
