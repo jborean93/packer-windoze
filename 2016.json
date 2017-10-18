@@ -38,7 +38,7 @@
     },
     {
       "type": "shell-local",
-      "command": "ansible-playbook main.yml -i hosts-{{ user `host_type` }} -vv"
+      "command": "ansible-playbook main.yml -i hosts-{{ user `host_type` }} -vvv"
     },
     {
       "type": "shell-local",

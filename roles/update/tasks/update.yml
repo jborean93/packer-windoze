@@ -15,4 +15,5 @@
 
 - name: reboot after final update task
   win_reboot:
+    reboot_timeout: 1200
   when: final_update.reboot_required is defined and final_update.reboot_required == True

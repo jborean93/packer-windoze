@@ -63,12 +63,16 @@
                     <Order>1</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass "Remove-Item -Path C:\temp -Force -Recurse; New-Item -Path C:\temp -ItemType Path"</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass "Remove-Item -Path C:\temp -Force -Recurse"</CommandLine>
                     <Order>2</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c logoff</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy ByPass "New-Item -Path C:\temp -ItemType Directory"</CommandLine>
                     <Order>3</Order>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>cmd.exe /c logoff</CommandLine>
+                    <Order>4</Order>
                 </SynchronousCommand>
             </FirstLogonCommands>
         </component>

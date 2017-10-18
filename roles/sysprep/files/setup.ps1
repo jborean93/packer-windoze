@@ -5,4 +5,6 @@ Set-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon -Value 0
 Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultUserName -ErrorAction SilentlyContinue
 Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultPassword -ErrorAction SilentlyContinue
 
+Remove-Item -Path C:\Windows\Panther\Unattend -Force -Recurse > $null
+
 PowerShell.exe -ExecutionPolicy ByPass -File C:\temp\ConfigureRemotingForAnsible.ps1 -EnableCredSSP -ForceNewSSLCert

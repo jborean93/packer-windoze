@@ -16,6 +16,7 @@
 
   - name: reboot the server after a failed check
     win_reboot:
+      reboot_timeout: 1200
 
   - name: check if there are missing updates - {{category_info.name}} ATTEMPT 2
     win_updates:
@@ -41,7 +42,19 @@
 
   - name: reboot server after update install or there was a failure - {{category_info.name}}
     win_reboot:
-      post_reboot_delay: 120 # wait 2 minutes for post configuration, wish there was a better way
+      reboot_timeout: 1200
     when: win_update_result|failed or win_update_result.reboot_required is defined and win_update_result.reboot_required == True
+
+  # running this command seems to wait before returning if Windows is still
+  # configuring updates, done to try and mitigate post reboot reboots
+  - name: check if Windows Update is busy
+    win_shell: (New-Object -ComObject Microsoft.Update.Session).CreateUpdateInstaller().IsBusy
+    become: yes
+    become_method: runas
+    become_user: SYSTEM
+    ignore_errors: yes
+  
+  - name: make sure connection is back online before continuing
+    wait_for_connection:
 
   when: update_count.found_update_count is defined and update_count.found_update_count > 0

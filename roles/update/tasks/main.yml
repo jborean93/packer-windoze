@@ -44,7 +44,18 @@
     state: absent
     delete_key: yes
 
+- name: stop the Windows Update service
+  win_service:
+    name: wuauserv
+    state: stopped
+
 - name: clear update log after it blew up from the above
   win_file:
     path: C:\Windows\WindowsUpdate.log
     state: absent
+  ignore_errors: yes
+
+- name: start the Windows Update service
+  win_service:
+    name: wuauserv
+    state: started
