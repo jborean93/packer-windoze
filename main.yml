@@ -21,4 +21,4 @@
   # Show hidden files
   # Show file extensions
   # Add chocolatey with procmon, procexp, pstools
-  # should I run win_dotnet_ngen
+  # Install NuGet package on Server 2016 for win_psmodule

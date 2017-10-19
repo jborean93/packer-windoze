@@ -17,48 +17,19 @@
     }
   register: dism_supported
 
-- block:
-  - name: run DISM with reset base on hosts that support it
-    win_command: DISM.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
-    when: dism_supported.stdout_lines[0] == "true"
+# Server 2016 fails on the first few runs, retry up to 5 times
+- name: run DISM with reset base on hosts that support it
+  win_command: DISM.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+  register: dism_cleanup_result
+  until: dism_cleanup_result.rc == 0
+  retries: 5
+  delay: 1
+  ignore_errors: yes
+  when: dism_supported.stdout_lines[0] == "true"
 
-  rescue:
-  - name: fetch DISM logs to help diagnose errors
-    fetch:
-      src: C:\Windows\Logs\DISM\dism.log
-      dest: logs\dism.log
-      flat: yes
-  
-  - name: fetch CBD logs to help diagnose errors
-    fetch:
-      src: C:\Windows\Logs\CBS\cbs.log
-      dest: logs\cbs.log
-  
-  - name: stop playbook execution due to DISM failure
-    fail:
-      msg: DISM /Cleanup-Image /StartComponentClenaup /ResetBase failed, see dism.log in logs/ for more details
-  when: os_version.stdout_lines[0] != "10.0-x86" and os_version.stdout_lines[0] != '10.0-AMD64' # TODO: Fails with error 2 file not found on Windows 10/Server 2016
-
-- block:
-  - name: run DISM to clear service packs when not Server 2008
-    win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded
-    when: os_version.stdout_lines[0] != '6.0-x86' and os_version.stdout_lines[0] != '6.0-AMD64'
-
-  rescue:
-  - name: fetch DISM logs to help diagnose errors
-    fetch:
-      src: C:\Windows\Logs\DISM\dism.log
-      dest: logs
-      flat: yes
-
-  - name: fetch CBD logs to help diagnose errors
-    fetch:
-      src: C:\Windows\Logs\CBS\cbs.log
-      dest: logs\cbs.log
-  
-  - name: stop playbook execution due to DISM failure
-    fail:
-      msg: DISM /Cleanup-Image /StartComponentClenaup /ResetBase failed, see dism.log in logs/ for more details
+- name: run DISM to clear service packs when not Server 2008
+  win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded
+  when: os_version.stdout_lines[0] != '6.0-x86' and os_version.stdout_lines[0] != '6.0-AMD64'
 
 - name: run compcln to clear service packs for Server 2008
   win_command: compcln.exe /quiet
