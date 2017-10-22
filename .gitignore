@@ -1,8 +1,14 @@
+# Packer Vagrant Cache
 output-virtualbox-iso/*
 packer_cache/*
-hosts
-*.retry
-.DS_Store
 .vagrant/*
 *.box
 *.pyc
+Vagrantfile
+
+# Ansible files
+hosts-*
+*.retry
+
+# MacOS files
+.DS_Store
