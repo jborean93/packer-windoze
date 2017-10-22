@@ -6,8 +6,7 @@
         [ "modifyvm", "{{.Name}}", "--memory", "2048" ],
         [ "modifyvm", "{{.Name}}", "--vram", "48" ],
         [ "modifyvm", "{{.Name}}", "--cpus", "2" ],
-        [ "modifyvm", "{{.Name}}", "--nic2", "hostonly" ],
-        [ "modifyvm", "{{.Name}}", "--hostonlyadapter2" ,"vboxnet0" ]
+        [ "modifyvm", "{{.Name}}", "--natpf1", "winrm,tcp,127.0.0.1,{{ user `winrm_forwarded_port` }},,5986" ]
       ],
       "guest_additions_mode": "disable",
       "guest_os_type": "{{ user `guest_os_type`}}",
@@ -24,16 +23,27 @@
       "winrm_use_ssl": true,
       "winrm_insecure": true,
 
-      "shutdown_command": "shutdown /s /t 0",
+      "shutdown_command": "schtasks.exe /Run /TN \"packer-shutdown\"",
       "shutdown_timeout": "15m",
       "floppy_files": [
         "files/answer/{{ user `host_type` }}/Autounattend.xml",
-        "files/bootstrap.ps1",
-        "files/packer-shutdown.bat"
+        "files/bootstrap.ps1"
       ]
     }
   ],
   "provisioners": [
+    {
+      "type": "shell-local",
+      "command": "printf '%s\n' '[windows]' '127.0.0.1' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port={{ user `winrm_forwarded_port` }}' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{ user `host_type` }}"
+    },
+    {
+      "type": "shell-local",
+      "command": "ansible-playbook main.yml -i hosts-{{ user `host_type` }} -vvv"
+    },
+    {
+      "type": "shell-local",
+      "command": "rm hosts-{{ user `host_type` }}"
+    }
   ],
   "post-processors": [
     {
@@ -44,7 +54,7 @@
   ],
   "variables": {
     "host_type": "2008_r2",
-    "host_ip": "192.168.56.112",
+    "winrm_forwarded_port": "55986",
     "guest_os_type": "Windows2008_64",
     "headless": "false",
     "iso_url": "/Users/jborean/Documents/iso/Microsoft Server 2008 R2.iso",

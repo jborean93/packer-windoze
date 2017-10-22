@@ -71,8 +71,12 @@
                     <Order>3</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>cmd.exe /c logoff</CommandLine>
+                    <CommandLine>cmd.exe /c net user Administrator /active:no</CommandLine>
                     <Order>4</Order>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>cmd.exe /c logoff</CommandLine>
+                    <Order>5</Order>
                 </SynchronousCommand>
             </FirstLogonCommands>
         </component>
