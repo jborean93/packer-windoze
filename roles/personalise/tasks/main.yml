@@ -1,0 +1,50 @@
+---
+- name: set show hidden files/folders and file extensions for the default user profile
+  win_regedit:
+    path: HKLM:\ANSIBLE\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+    name: '{{item.name}}'
+    data: '{{item.data}}'
+    type: dword
+    state: present
+    hive: C:\Users\Default\NTUSER.dat
+  register: profile_reg_change
+  # seems like this fails to unload in Packer for whatever reason, we don't want to fail if we got that error
+  failed_when: profile_reg_change|failed and "Failed to unload registry hive at ANSIBLE" not in profile_reg_change.msg
+  with_items:
+  - name: Hidden
+    data: 1
+  - name: HideFileExt
+    data: 0
+
+- name: check if ANSIBLE key was successfully unloaded
+  win_reg_stat:
+    path: HKLM:\ANSIBLE
+  register: reg_ansible_stat
+
+- name: unload ANSIBLE key
+  win_command: reg.exe unload HKLM\ANSIBLE
+  when: reg_ansible_stat.exists == True
+
+- name: set show hidden files/folders and file extensions for the current user profile
+  win_regedit:
+    path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+    name: '{{item.name}}'
+    data: '{{item.data}}'
+    type: dword
+    state: present
+  with_items:
+  - name: Hidden
+    data: 1
+  - name: HideFileExt
+    data: 0
+
+- name: install procmon, procexp and pstools
+  win_chocolatey:
+    name: '{{item}}'
+    state: present
+  with_items:
+  - procmon
+  - procexp
+  - pstools
+
+# Install NuGet package on Server 2016 for win_psmodule

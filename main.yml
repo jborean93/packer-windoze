@@ -12,13 +12,8 @@
 
   roles:
   - update
+  - personalise
   - cleanup-winsxs
   - cleanup-features
   - cleanup
   - sysprep
-
-  # To add
-  # Show hidden files
-  # Show file extensions
-  # Add chocolatey with procmon, procexp, pstools
-  # Install NuGet package on Server 2016 for win_psmodule

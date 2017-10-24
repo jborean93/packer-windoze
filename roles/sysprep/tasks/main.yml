@@ -34,6 +34,8 @@
   win_scheduled_task:
     name: packer-shutdown
     username: SYSTEM
+    disallow_start_if_on_batteries: no
+    stop_if_going_on_batteries: no
     actions:
     - path: powershell.exe
       arguments: Remove-Item -Path WSMan:\localhost\Listener\* -Recurse -Force
