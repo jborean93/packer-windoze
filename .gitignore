@@ -9,6 +9,11 @@ Vagrantfile
 # Ansible files
 hosts-*
 *.retry
+2008/
+2008r2/
+2012
+2012r2/
+2016/
 
 # MacOS files
 .DS_Store

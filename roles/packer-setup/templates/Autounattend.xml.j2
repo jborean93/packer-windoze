@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
+{% if man_packer_setup_host_type == "2008" %}
+    <servicing>
+        <package action="configure">
+            <assemblyIdentity name="Microsoft-Windows-Foundation-Package" version="6.0.6001.18000" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="" />
+            <selection name="MicrosoftWindowsPowerShell" state="true" />
+        </package>
+    </servicing>
+{% endif %}
     <settings pass="windowsPE">
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-international-core-winpe -->
         <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
@@ -16,6 +24,25 @@
         <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <DiskConfiguration>
                 <Disk wcm:action="add">
+{% if man_packer_setup_host_type == "2008" %}
+                    <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                            <Order>1</Order>
+                            <Type>Primary</Type>
+                            <Extend>true</Extend>
+                        </CreatePartition>
+                    </CreatePartitions>
+                    <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                            <Active>true</Active>
+                            <Format>NTFS</Format>
+                            <Label>Windows {{man_packer_setup_host_type}}</Label>
+                            <Letter>C</Letter>
+                            <Order>1</Order>
+                            <PartitionID>1</PartitionID>
+                        </ModifyPartition>
+                    </ModifyPartitions>
+{% else %}
                     <CreatePartitions>
                         <CreatePartition wcm:action="add">
                             <Type>Primary</Type>
@@ -38,12 +65,13 @@
                         </ModifyPartition>
                         <ModifyPartition wcm:action="add">
                             <Format>NTFS</Format>
-                            <Label>Windows 2012</Label>
+                            <Label>Windows {{man_packer_setup_host_type}}</Label>
                             <Letter>C</Letter>
                             <Order>2</Order>
                             <PartitionID>2</PartitionID>
                         </ModifyPartition>
                     </ModifyPartitions>
+{% endif %}
                     <DiskID>0</DiskID>
                     <WillWipeDisk>true</WillWipeDisk>
                 </Disk>
@@ -53,17 +81,25 @@
                     <InstallFrom>
                         <MetaData wcm:action="add">
                             <Key>/IMAGE/NAME </Key>
-                            <Value>Windows Server 2012 SERVERSTANDARD</Value>
+                            <Value>{{pri_packer_setup_config.iso_wim_label}}</Value>
                         </MetaData>
                     </InstallFrom>
                     <InstallTo>
                         <DiskID>0</DiskID>
+{% if man_packer_setup_host_type == "2008" %}
+                        <PartitionID>1</PartitionID>
+{% else %}
                         <PartitionID>2</PartitionID>
+{% endif %}
                     </InstallTo>
                 </OSImage>
             </ImageInstall>
             <UserData>
                 <ProductKey>
+{% if man_packer_setup_host_type == "2008" %}
+                    <!-- KMS Client Setup key 2008 Standard https://technet.microsoft.com/en-us/library/jj612867(v=ws.11).aspx -->
+                    <Key>TM24T-X9RMF-VWXK6-X8JC9-BFGM2</Key>
+{% endif %}
                     <WillShowUI>OnError</WillShowUI>
                 </ProductKey>
                 <AcceptEula>true</AcceptEula>
@@ -73,14 +109,18 @@
         </component>
     </settings>
     <settings pass="generalize">
+{% if man_packer_setup_host_type != "2008" %}
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-security-spp -->
         <component name="Microsoft-Windows-Security-SPP" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <SkipRearm>1</SkipRearm>
         </component>
+{% endif %}
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-pnpsysprep -->
         <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <PersistAllDeviceInstalls>false</PersistAllDeviceInstalls>
+{% if man_packer_setup_host_type != "2008" %}
             <DoNotCleanUpNonPresentDevices>false</DoNotCleanUpNonPresentDevices>
+{% endif %}
         </component>
     </settings>
     <settings pass="oobeSystem">
@@ -95,49 +135,67 @@
         <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <OOBE>
                 <HideEULAPage>true</HideEULAPage>
+                <NetworkLocation>Home</NetworkLocation>
+                <ProtectYourPC>1</ProtectYourPC>
+{% if man_packer_setup_host_type != "2008" %}
+                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+{% endif %}
+{% if man_packer_setup_host_type not in ("2008", "2008r2") %}
                 <HideLocalAccountScreen>true</HideLocalAccountScreen>
                 <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
                 <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
-                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-                <NetworkLocation>Home</NetworkLocation>
-                <ProtectYourPC>1</ProtectYourPC>
+{% endif %}
             </OOBE>
             <TimeZone>UTC</TimeZone>
+{% if man_packer_setup_host_type == "2008" %}
+            <ShowWindowsLive>false</ShowWindowsLive>
+{% endif %}
             <UserAccounts>
                 <LocalAccounts>
                     <LocalAccount wcm:action="add">
                         <Group>Administrators</Group>
-                        <DisplayName>vagrant</DisplayName>
-                        <Name>vagrant</Name>
-                        <Description>Vagrant User</Description>
+                        <DisplayName>{{opt_packer_setup_winrm_username}}</DisplayName>
+                        <Name>{{opt_packer_setup_winrm_username}}</Name>
+                        <Description>{{opt_packer_setup_winrm_username}}</Description>
                         <Password>
-                            <Value>vagrant</Value>
+                            <Value>{{opt_packer_setup_winrm_password}}</Value>
                             <PlainText>true</PlainText>
                         </Password>
                     </LocalAccount>
                 </LocalAccounts>
                 <AdministratorPassword>
-                    <Value>vagrant</Value>
+                    <Value>{{opt_packer_setup_winrm_password}}</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
             </UserAccounts>
             <AutoLogon>
                 <Enabled>true</Enabled>
-                <Username>vagrant</Username>
+                <Username>{{opt_packer_setup_winrm_username}}</Username>
                 <Password>
-                    <Value>vagrant</Value>
+                    <Value>{{opt_packer_setup_winrm_password}}</Value>
                     <PlainText>true</PlainText>
                 </Password>
             </AutoLogon>
             <FirstLogonCommands>
+{% if man_packer_setup_host_type == "2008" %}
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted"</CommandLine>
+                    <Order>1</Order>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add">
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe a:\bootstrap.ps1 {{pri_packer_setup_config.bootstrap_start}}</CommandLine>
+                    <Order>2</Order>
+                </SynchronousCommand>
+{% else %}
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force"</CommandLine>
                     <Order>1</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\bootstrap.ps1 tiworker-fix</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\bootstrap.ps1 {{pri_packer_setup_config.bootstrap_start}}</CommandLine>
                     <Order>2</Order>
                 </SynchronousCommand>
+{% endif %}
             </FirstLogonCommands>
         </component>
     </settings>

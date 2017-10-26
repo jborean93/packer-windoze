@@ -1,0 +1,18 @@
+---
+- name: set up local dir with packer json and build files
+  hosts: localhost
+  gather_facts: no
+  vars:
+    opt_packer_setup_winrm_username: vagrant
+    opt_packer_setup_winrm_password: vagrant
+
+  pre_tasks:
+  - name: check that the Ansible version is at least 2.5
+    assert:
+      that:
+      - ansible_version.major >= 2
+      - ansible_version.minor >= 5
+      msg: packer-windoze requires Ansible 2.5 or newer to run, please upgrade or checkout devel before running
+
+  roles:
+  - packer-setup

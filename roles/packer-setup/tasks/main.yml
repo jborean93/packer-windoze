@@ -1,0 +1,48 @@
+---
+- name: check that the mandatory variables have been set
+  assert:
+    that:
+    - man_packer_setup_host_type is defined
+
+- name: check that the host type specified is valid
+  fail:
+    msg: man_packer_setup_host_type {{man_packer_setup_host_type}} is not a valid host type, expecting {{pri_packer_setup_host_config.keys()}}
+  when: pri_packer_setup_host_config[man_packer_setup_host_type] is not defined
+
+- name: set fact of packer host config based on host_type
+  set_fact:
+    pri_packer_setup_config: '{{pri_packer_setup_host_config[man_packer_setup_host_type]}}'
+
+- name: override iso_url with opt_packer_setup_iso_path if defined
+  set_fact:
+    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_url", opt_packer_setup_iso_path)}}'
+  when: opt_packer_setup_iso_path is defined
+
+- name: override iso_wim_label with opt_packer_setup_iso_wim_label if defined
+  set_fact:
+    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_wim_label", opt_packer_setup_iso_wim_label)}}'
+  when: opt_packer_setup_iso_wim_label is defined
+
+- name: create the packer build folder for the packer files
+  file:
+    path: '{{man_packer_setup_host_type}}'
+    state: directory
+
+- name: create packer.json file based on vars set
+  copy:
+    content: '{{pri_packer_setup_json|to_nice_json}}'
+    dest: '{{man_packer_setup_host_type}}/packer.json'
+
+- name: copy the bootstrap.ps1 file
+  copy:
+    dest: '{{man_packer_setup_host_type}}/bootstrap.ps1'
+    src: bootstrap.ps1
+
+- name: template out the Autounattend.xml file
+  template:
+    dest: '{{man_packer_setup_host_type}}/Autounattend.xml'
+    src: Autounattend.xml.j2
+
+- name: show user how to run packer build after this completes
+  debug:
+    msg: Now that the packer files have been set up, run "packer build -force {{man_packer_setup_host_type}}/packer.json" to build the packer image
