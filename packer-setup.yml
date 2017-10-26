@@ -3,8 +3,8 @@
   hosts: localhost
   gather_facts: no
   vars:
-    opt_packer_setup_winrm_username: vagrant
-    opt_packer_setup_winrm_password: vagrant
+    opt_packer_setup_username: vagrant
+    opt_packer_setup_password: vagrant
     opt_packer_setup_headless: true
 
   pre_tasks:

@@ -10,7 +10,7 @@
   register: profile_reg_change
   # seems like this fails to unload in Packer for whatever reason, we don't want to fail if we got that error
   failed_when: profile_reg_change|failed and "Failed to unload registry hive at ANSIBLE" not in profile_reg_change.msg
-  with_items:
+  loop:
   - name: Hidden
     data: 1
   - name: HideFileExt
@@ -32,7 +32,7 @@
     data: '{{item.data}}'
     type: dword
     state: present
-  with_items:
+  loop:
   - name: Hidden
     data: 1
   - name: HideFileExt
@@ -42,7 +42,7 @@
   win_chocolatey:
     name: '{{item}}'
     state: present
-  with_items:
+  loop:
   - procmon
   - procexp
   - pstools

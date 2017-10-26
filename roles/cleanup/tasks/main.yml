@@ -15,7 +15,7 @@
   win_file:
     path: '{{item}}'
     state: absent
-  with_items:
+  loop:
   - C:\Temp
   - C:\Windows\Panther
   - C:\Windows\Temp

@@ -3,7 +3,7 @@
   win_file:
     path: '{{item}}'
     state: directory
-  with_items:
+  loop:
   - C:\Windows\Panther\Unattend
   - C:\temp
 

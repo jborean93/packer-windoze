@@ -50,8 +50,6 @@
   - name: check if Windows Update is busy
     win_shell: (New-Object -ComObject Microsoft.Update.Session).CreateUpdateInstaller().IsBusy
     become: yes
-    become_method: runas
-    become_user: SYSTEM
     ignore_errors: yes
   
   - name: make sure connection is back online before continuing

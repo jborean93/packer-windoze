@@ -5,7 +5,7 @@
     name: '{{item.name}}'
     data: '{{item.data}}'
     type: dword
-  with_items:
+  loop:
   - name: Flags
     data: 7
   - name: Level
@@ -34,7 +34,7 @@
       finished: False
 
 - include_tasks: update.yml
-  with_items: [1, 2, 3, 4, 5, 6, 7, 8, 9, 'end']
+  loop: [1, 2, 3, 4, 5, 6, 7, 8, 9, 'end']
   loop_control:
     loop_var: loop_number
 

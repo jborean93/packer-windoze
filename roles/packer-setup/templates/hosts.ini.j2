@@ -2,8 +2,10 @@
 127.0.0.1
 
 [windows:vars]
-ansible_user={{opt_packer_setup_winrm_username}}
-ansible_password={{opt_packer_setup_winrm_password}}
+ansible_user={{opt_packer_setup_username}}
+ansible_password={{opt_packer_setup_password}}
 ansible_port={{pri_packer_setup_config.forwarded_port}}
 ansible_connection=winrm
 ansible_winrm_server_cert_validation=ignore
+ansible_become_method=runas
+ansible_become_user=SYSTEM

@@ -14,8 +14,8 @@ pri_packer_setup_json:
     iso_checksum: '{{pri_packer_setup_config.iso_checksum}}'
     iso_checksum_type: md5
     communicator: winrm
-    winrm_username: '{{opt_packer_setup_winrm_username}}'
-    winrm_password: '{{opt_packer_setup_winrm_password}}'
+    winrm_username: '{{opt_packer_setup_username}}'
+    winrm_password: '{{opt_packer_setup_password}}'
     winrm_port: '5986'
     winrm_use_ssl: true
     winrm_insecure: true

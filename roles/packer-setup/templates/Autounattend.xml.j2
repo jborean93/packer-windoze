@@ -154,25 +154,25 @@
                 <LocalAccounts>
                     <LocalAccount wcm:action="add">
                         <Group>Administrators</Group>
-                        <DisplayName>{{opt_packer_setup_winrm_username}}</DisplayName>
-                        <Name>{{opt_packer_setup_winrm_username}}</Name>
-                        <Description>{{opt_packer_setup_winrm_username}}</Description>
+                        <DisplayName>{{opt_packer_setup_username}}</DisplayName>
+                        <Name>{{opt_packer_setup_username}}</Name>
+                        <Description>{{opt_packer_setup_username}}</Description>
                         <Password>
-                            <Value>{{opt_packer_setup_winrm_password}}</Value>
+                            <Value>{{opt_packer_setup_password}}</Value>
                             <PlainText>true</PlainText>
                         </Password>
                     </LocalAccount>
                 </LocalAccounts>
                 <AdministratorPassword>
-                    <Value>{{opt_packer_setup_winrm_password}}</Value>
+                    <Value>{{opt_packer_setup_password}}</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
             </UserAccounts>
             <AutoLogon>
                 <Enabled>true</Enabled>
-                <Username>{{opt_packer_setup_winrm_username}}</Username>
+                <Username>{{opt_packer_setup_username}}</Username>
                 <Password>
-                    <Value>{{opt_packer_setup_winrm_password}}</Value>
+                    <Value>{{opt_packer_setup_password}}</Value>
                     <PlainText>true</PlainText>
                 </Password>
             </AutoLogon>
