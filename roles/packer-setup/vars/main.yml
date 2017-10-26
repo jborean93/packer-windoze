@@ -9,7 +9,7 @@ pri_packer_setup_json:
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--natpf1", "winrm,tcp,127.0.0.1,{{pri_packer_setup_config.forwarded_port}},,5986" ]
     guest_additions_mode: "disable"
     guest_os_type: '{{pri_packer_setup_config.guest_os_type}}'
-    headless: false
+    headless: '{{opt_packer_setup_headless}}'
     iso_url: '{{pri_packer_setup_config.iso_url}}'
     iso_checksum: '{{pri_packer_setup_config.iso_checksum}}'
     iso_checksum_type: md5
@@ -27,11 +27,7 @@ pri_packer_setup_json:
 
   provisioners:
   - type: shell-local
-    command: "printf '%s\n' '[windows]' '127.0.0.1' '' '[windows:vars]' 'ansible_user=vagrant' 'ansible_password=vagrant' 'ansible_port={{pri_packer_setup_config.forwarded_port}}' 'ansible_connection=winrm' 'ansible_winrm_server_cert_validation=ignore' > hosts-{{man_packer_setup_host_type}}"
-  - type: shell-local
-    command: ansible-playbook main.yml -i hosts-{{man_packer_setup_host_type}} -vv
-  - type: shell-local
-    command: rm hosts-{{man_packer_setup_host_type}}
+    command: ansible-playbook main.yml -i {{man_packer_setup_host_type}}/hosts.ini -vv
 
   post-processors:
   - type: vagrant

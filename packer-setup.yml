@@ -5,6 +5,7 @@
   vars:
     opt_packer_setup_winrm_username: vagrant
     opt_packer_setup_winrm_password: vagrant
+    opt_packer_setup_headless: true
 
   pre_tasks:
   - name: check that the Ansible version is at least 2.5

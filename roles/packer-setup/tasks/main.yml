@@ -43,6 +43,11 @@
     dest: '{{man_packer_setup_host_type}}/Autounattend.xml'
     src: Autounattend.xml.j2
 
+- name: template out the Ansible host file required during provisioning
+  template:
+    dest: '{{man_packer_setup_host_type}}/hosts.ini'
+    src: hosts.ini.j2
+
 - name: show user how to run packer build after this completes
   debug:
     msg: Now that the packer files have been set up, run "packer build -force {{man_packer_setup_host_type}}/packer.json" to build the packer image
