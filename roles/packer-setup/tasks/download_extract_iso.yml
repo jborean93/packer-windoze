@@ -1,0 +1,32 @@
+# used to download and extract any evaluation ISO's that are a self extracting
+# exe, Server 2008 64 bit is the only one currently that is in this form
+---
+- name: check if unrar is installed
+  command: command -v unrar
+  ignore_errors: yes
+  changed_when: false
+  register: pri_packer_setup_unrar_result
+
+- name: fail if unrar is not installed
+  fail:
+    msg: The package 'unrar' is required to extract the ISO at {{pri_packer_setup_config.iso_url}}
+  when: pri_packer_setup_unrar_result.rc != 0
+
+- name: download evaluation ISO
+  get_url:
+    url: '{{pri_packer_setup_config.iso_url}}'
+    dest: '{{man_packer_setup_host_type}}/tmp-iso.exe'
+
+- name: get name of the ISO inside the rar package
+  command: unrar lb {{man_packer_setup_host_type}}/tmp-iso.exe
+  changed_when: false
+  register: pri_packer_setup_unrar_file
+
+- name: extract ISO fro self extracting exe file
+  command: unrar e {{man_packer_setup_host_type}}/tmp-iso.exe {{man_packer_setup_host_type}}/
+  args:
+    creates: '{{man_packer_setup_host_type}}/{{pri_packer_setup_unrar_file.stdout}}'
+
+- name: override iso_url packer fact with newly extracted file
+  set_fact:
+    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_url", man_packer_setup_host_type + "/" + pri_packer_setup_unrar_file.stdout)}}'

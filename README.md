@@ -66,7 +66,8 @@ The following parameters must be set using the `-e` arguments;
 
 You can set the host type to the following values
 
-* `2008`: Windows Server 2008 Standard 64-bit
+* `2008-x86`: Windows Server 2008 Standard 32-bit
+* `2008-x64`: Windows Server 2008 Standard 64-bit
 * `2008r2`: Windows Server 2008 R2 Standard
 * `2012`: Windows Server 2012 Standard
 * `2012r2`: Windows Server 2012 R2 Standard
@@ -81,6 +82,14 @@ change the way Packer builds the images in the next step;
 * `opt_packer_setup_iso_wim_label`: The WIM image name to use when installing Windows from an ISO, the process defaults to the Standard edition if not set.
 * `opt_packer_setup_username`: (Default: `vagrant`) The name of the user to create in the provisioning process, this is the only user that will available in the image created as the builtin Administrator account is disabled.
 * `opt_packer_setup_password`: (Default: `vagrant`) The password for `opt_packer_setup_username`, this password is also set for the builtin Administrator account even though it is disabled in the image.
+* `opt_packer_setup_product_key`: The product key to use when installing Windows, do not set this unless you know what you are doing.
+
+To add a post-processor to upload to Vagrant Cloud, add in the following 3
+variables;
+
+* `opt_packer_setup_access_token`: The acces token for the Vagrant Cloud API, this is set to the `access_token` key in the packer build file.
+* `opt_packer_setup_box_tag`: The shorthand tag for the map that maps to Vagrant Cloud, this is set to the `box_tag` key in the packer build file.
+* `opt_packer_setup_version`: The version number for the box which is validated based on semantic versioning, this is set to the `version` key in the packer build file.
 
 ### Create Images with Packer
 
@@ -98,7 +107,7 @@ This process takes a looong time to finish as Packer will download the ISO,
 install Windows and finally configure Windows. The best thing to do is to run
 this overnight or as a background process.
 
-Once complete a `.box` file will be created in the same folder the
+Once complete the `virtualbox.box` file will be created in the same folder the
 `packer.json` file is located in. This file can be added to Vagrant using
 `vagrant box add file.box` or can be shared with others using your own methods.
 
@@ -130,14 +139,11 @@ evaluation time.
 
 ## Backlog/Future Work
 
-* Windows Server 2008 32 bit
 * Windows Server Core images
 * Windows Server Nano images
-* Windows Vista 32 and 64 bit
 * Windows 7 32 and 64 bit
 * Windows 8.1 32 and 64 bit
 * Windows 10 32 and 64 bit
 * Look at supporting parallel builds
-* Look at downloading the evaluation ISO's and storing them locally (extract Server 2008 from exe if possible)
 * Look at slipstreaming Windows updates into the evaluation ISO's instead of running the updates from scratch each time
 * Look at supporting local WSUS servers during the Update phase to save time and bandwidth

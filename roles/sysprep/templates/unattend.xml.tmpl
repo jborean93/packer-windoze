@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="generalize">
-        <component name="Microsoft-Windows-Security-SPP" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-Security-SPP" processorArchitecture="{{man_sysprep_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <SkipRearm>1</SkipRearm>
         </component>
-        <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="{{man_sysprep_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <PersistAllDeviceInstalls>false</PersistAllDeviceInstalls>
-{% if os_version.stdout_lines[0] != "6.0-AMD64" %}
+{% if man_sysprep_is_longhorn == False %}
             <DoNotCleanUpNonPresentDevices>false</DoNotCleanUpNonPresentDevices>
 {% endif %}
         </component>
     </settings>
     <settings pass="oobeSystem">
-        <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="{{man_sysprep_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <InputLocale>en-US</InputLocale>
             <SystemLocale>en-US</SystemLocale>
             <UILanguage>en-US</UILanguage>
             <UserLocale>en-US</UserLocale>
         </component>
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{man_sysprep_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <OOBE>
                 <HideEULAPage>true</HideEULAPage>
                 <ProtectYourPC>1</ProtectYourPC>
                 <NetworkLocation>Home</NetworkLocation>
-{% if os_version.stdout_lines[0] != "6.0-AMD64" %}
+{% if man_sysprep_is_longhorn == False %}
                 <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
 {% endif %}
             </OOBE>
             <TimeZone>UTC</TimeZone>
-{% if os_version.stdout_lines[0] == "6.0-AMD64" %}
+{% if man_sysprep_is_longhorn == True %}
             <ComputerName>*</ComputerName>
 {% endif %}
             <UserAccounts>
@@ -82,9 +82,9 @@
         </component>
     </settings>
     <settings pass="specialize">
-{% if os_version.stdout_lines[0] == "6.0-AMD64" %}
+{% if man_sysprep_is_longhorn == True %}
         <!-- Server 2008 requires this to stop asking for the Computer Name after sysprep -->
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{man_sysprep_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <ComputerName>*</ComputerName>
         </component>
 {% endif %}

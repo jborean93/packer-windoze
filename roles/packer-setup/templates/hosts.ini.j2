@@ -9,3 +9,6 @@ ansible_connection=winrm
 ansible_winrm_server_cert_validation=ignore
 ansible_become_method=runas
 ansible_become_user=SYSTEM
+
+man_sysprep_architecture={{pri_packer_setup_config.architecture}}
+man_sysprep_is_longhorn={{pri_packer_setup_config.answer_longhorn}}

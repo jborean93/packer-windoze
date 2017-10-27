@@ -1,4 +1,10 @@
 ---
+- name: assert mandatory variables have been set
+  assert:
+    that:
+    - man_sysprep_architecture is defined
+    - man_sysprep_is_longhorn is defined
+
 - name: ensure unattend panther and temp directory exists
   win_file:
     path: '{{item}}'

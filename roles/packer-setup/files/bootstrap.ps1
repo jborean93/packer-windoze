@@ -48,6 +48,35 @@ Function Download-File($url, $path) {
     $client.DownloadFile($url, $path)
 }
 
+Function Extract-Zip($zip, $dest) {
+    Write-Log -message "extracting '$zip' to '$dest'"
+    try {
+        Add-Type -AssemblyName System.IO.Compression.FileSystem > $null
+        $legacy = $false
+    } catch {
+        $legacy = $true
+    }
+
+    if ($legacy) {
+        try {
+            $shell = New-Object -ComObject Shell.Application
+            $zip_src = $shell.NameSpace($zip)
+            $zip_dest = $shell.NameSpace($dest)
+            $zip_dest.CopyHere($zip_src.Items(), 1044)
+        } catch {
+            Write-Log -message "failed to extract zip file: $($_.Exception.Message)" -level "ERROR"
+            throw $_
+        }
+    } else {
+        try {
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $dest)
+        } catch {
+            Write-Log -message "failed to extract zip file: $($_.Exception.Message)" -level "ERROR"
+            throw $_
+        }
+    }
+}
+
 $action = $args[0]
 if (-not (Test-Path -Path $tmp_dir)) {
     New-Item -Path $tmp_dir -ItemType Directory | Out-Null
@@ -74,14 +103,14 @@ switch($action) {
         Write-Log -message "install Server 2008 SP2"
         $architecture = $env:PROCESSOR_ARCHITECTURE
         if ($architecture -eq "AMD64") {
-            $architecture = "x64"
+            $sp_url = "https://download.microsoft.com/download/4/7/3/473B909B-7B52-49FE-A443-2E2985D3DFC3/Windows6.0-KB948465-X64.exe"
         } else {
-            $architecture = "x86"
+            $sp_url = "https://download.microsoft.com/download/E/7/7/E77CBA41-0B6B-4398-BBBF-EE121EEC0535/Windows6.0-KB948465-X86.exe"
         }
-        $url = "https://download.microsoft.com/download/4/7/3/473B909B-7B52-49FE-A443-2E2985D3DFC3/Windows6.0-KB948465-$($architecture).exe"
-        $file = "$tmp_dir\Windows6.0-KB948465-$($architecture).exe"
-        Download-File -url $url -path $file
-        $exit_code = Run-Process -executable $file -arguments "/quiet /norestart"
+        $sp_filename = $sp_url.Split("/")[-1]
+        $sp_file = "$tmp_dir\$sp_filename"
+        Download-File -url $sp_url -path $sp_file
+        $exit_code = Run-Process -executable $sp_file -arguments "/quiet /norestart"
         if ($exit_code -ne 0 -and $exit_code -ne 3010) {
             $error_message = "failed to update Server 2008 to SP2: exit code $exit_code"
             Write-Log -message $error_message -level "ERROR"
@@ -214,20 +243,15 @@ switch($action) {
         $filename = $hotfix_url.Split("/")[-1]
         $compressed_file = "$tmp_dir\$($filename).zip"
         Download-File -url $hotfix_url -path $compressed_file
-
-        Write-Log -message "extracting hotfix from $compressed_file"
-        $shell = New-Object -ComObject Shell.Application
-        $zip_src = $shell.NameSpace($compressed_file)
-        $zip_dest = $shell.NameSpace($tmp_dir)
-        # The hotfix file is the first file in the zip, need to loop through the zip contents
-        foreach ($entry in $zip_src.Items()) {
-            $hotfix_filename = "$($entry.Name).msu"
-            $zip_dest.CopyHere($entry, 1044)
+        Extract-Zip -zip $compressed_file -dest $tmp_dir
+        $hotfix_file = Get-Item -Path "$tmp_dir\*KB2842230*.msu"
+        if ($hotfix_file -eq $null) {
+            $error_message = "unable to find extracted msu file for hotfix KB"
+            Write-Log -message $error_message -level "ERROR"
+            throw $error_message
         }
-        Write-Log -message "extraction complete, hotfix extract filename is '$hotfix_filename'"
         
         # Now install the hotfix
-        $hotfix_file = "$tmp_dir\$hotfix_filename"
         $hotfix_args = "/quiet /norestart"
         $exit_code = Run-Process -executable $hotfix_file -arguments $hotfix_args
         if ($exit_code -ne 0 -and $exit_code -ne 3010) {

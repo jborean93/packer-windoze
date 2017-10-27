@@ -35,45 +35,79 @@ pri_packer_setup_json:
     output: "{{man_packer_setup_host_type}}/{{'{{'}}.Provider{{'}}'}}.box"
 
 # host settings like url's, checksums, vbox types, etc
+#   iso_url: The URL of the evaluation ISO
+#   iso_checksum: The md5 checksum of the evaluation ISO
+#   guest_os_type: The virtualbox guest os type used when builing the VM
+#   forwarded_port: The port to set on 127.0.0.1 that will forward to port 5986 on the Windows host, this should be unique
+#   iso_wim_label: The WIM Name on the install ISO of the edition to install
+#   bootstrap_start: Where to start on the bootstrap.ps1 script, used as an arg in Autounattend.xml
+#   architecture: The architecture of the build (x86 or amd64) for the answer file
+#   answer_longhorn: Whether the host type will use the older Server 2008 answer file
+#   product_key: The KMS product key required in setup, only used in Server 2008 answer file
 pri_packer_setup_host_config:
-  '2008':
-    # note this URL is an self extracting zip file that contains the ISO, needs to be extracted first and is only here for documentation
-    iso_url: https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.exe
-    iso_checksum: 0477c88678efb8ebc5cd7a9e9efd8b82
-    guest_os_type: Windows2008_64
+  # host pattern <osname-[architecture]-[option]> where architecture and option
+  # are optional and will default to x64 and minimal by default
+  '2008-x86':
+    iso_url: https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_x86fre_Server_en-us-KRMSFRE_EN_DVD.iso
+    iso_checksum: 89fbc4c7baafc0b0c05f0fa32c192a17
+    guest_os_type: Windows2008
     forwarded_port: 55981
 
     iso_wim_label: Windows Longhorn SERVERSTANDARD
     bootstrap_start: 2008-sp2
+    architecture: x86
+    answer_longhorn: yes
+    product_key: TM24T-X9RMF-VWXK6-X8JC9-BFGM2
+  '2008-x64':
+    iso_url: https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.exe
+    iso_checksum: 0477c88678efb8ebc5cd7a9e9efd8b82
+    guest_os_type: Windows2008_64
+    forwarded_port: 55982
+
+    iso_wim_label: Windows Longhorn SERVERSTANDARD
+    bootstrap_start: 2008-sp2
+    architecture: amd64
+    answer_longhorn: yes
+    product_key: TM24T-X9RMF-VWXK6-X8JC9-BFGM2
   '2008r2':
     iso_url: https://download.microsoft.com/download/7/5/E/75EC4E54-5B02-42D6-8879-D8D3A25FBEF7/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso
     iso_checksum: 4263be2cf3c59177c45085c0a7bc6ca5
     guest_os_type: Windows2008_64
-    forwarded_port: 55982
+    forwarded_port: 55983
 
     iso_wim_label: Windows Server 2008 R2 SERVERSTANDARD
     bootstrap_start: dotnet
+    architecture: amd64
+    answer_longhorn: no
   '2012':
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/D/A/6DAB58BA-F939-451D-9101-7DE07DC09C03/9200.16384.WIN8_RTM.120725-1247_X64FRE_SERVER_EVAL_EN-US-HRM_SSS_X64FREE_EN-US_DV5.ISO
     iso_checksum: 8503997171f731d9bd1cb0b0edc31f3d
     guest_os_type: Windows2012_64
-    forwarded_port: 55983
+    forwarded_port: 55984
 
     iso_wim_label: Windows Server 2012 SERVERSTANDARD
     bootstrap_start: tiworker-fix
+    architecture: amd64
+    answer_longhorn: no
   '2012r2':
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO
     iso_checksum: 5b5e08c490ad16b59b1d9fab0def883a
     guest_os_type: Windows2012_64
-    forwarded_port: 55984
+    forwarded_port: 55985
 
     iso_wim_label: Windows Server 2012 R2 SERVERSTANDARD
     bootstrap_start: update-wua
+    architecture: amd64
+    answer_longhorn: no
   '2016':
     iso_url: http://care.dlservice.microsoft.com/dl/download/1/4/9/149D5452-9B29-4274-B6B3-5361DBDA30BC/14393.0.161119-1705.RS1_REFRESH_SERVER_EVAL_X64FRE_EN-US.ISO
     iso_checksum: 70721288bbcdfe3239d8f8c0fae55f1f
     guest_os_type: Windows2016_64
-    forwarded_port: 55985
+    forwarded_port: 55986
 
     iso_wim_label: Windows Server 2016 SERVERSTANDARD
     bootstrap_start: update-wua
+    architecture: amd64
+    answer_longhorn: no
+  # TODO: 7-x86, 7-x64, 8.1-x86, 8.1-x64, 10-x86, 10-x64
+  # How should I do 10 now that there are cummulative updates within
