@@ -28,6 +28,11 @@
     pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("product_key", opt_packer_setup_product_key)}}'
   when: opt_packer_setup_product_key is defined
 
+- name: create the packer build folder for the packer files
+  file:
+    path: '{{man_packer_setup_host_type}}'
+    state: directory
+
 - name: download and extract ISO's that end with .exe
   include_tasks: download_extract_iso.yml
   when: pri_packer_setup_config.iso_url.endswith('.exe') and opt_packer_setup_iso_path is not defined
@@ -46,11 +51,6 @@
       box_tag: '{{opt_packer_setup_box_tag}}'
       version: '{{opt_packer_setup_version}}'
   when: opt_packer_setup_access_token is defined and opt_packer_setup_version is defined
-
-- name: create the packer build folder for the packer files
-  file:
-    path: '{{man_packer_setup_host_type}}'
-    state: directory
 
 - name: create packer.json file based on vars set
   copy:

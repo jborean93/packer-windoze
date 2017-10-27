@@ -35,7 +35,6 @@ pri_packer_setup_json:
 # we have this as a separate entry as the upload flag modifies this
 pri_packer_setup_post_processors:
   type: vagrant
-  keep_input_artifacts: false
   output: "{{man_packer_setup_host_type}}/virtualbox.box"
 
 # host settings like url's, checksums, vbox types, etc
