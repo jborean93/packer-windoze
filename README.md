@@ -26,6 +26,12 @@ To use the scripts in this repo you will need the following;
 
 _Note: as of writting this Ansible 2.5 has not been officially released, please checkout from source on the devel branch_
 
+When setting `man_packer_setup_host_type: 2008-x64`, Ansible will extract the
+evaluation ISO from a self extracting archive. This requires the `unrar`
+package to be installed. If you don't want to install this package, manually
+extract the ISO on another box and specify the path under
+`opt_packer_setup_iso_path`.
+
 ## How to Run
 
 To create an image, the process is split up into 2 phases
