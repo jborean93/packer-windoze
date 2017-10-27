@@ -109,7 +109,8 @@ this overnight or as a background process.
 
 Once complete the `virtualbox.box` file will be created in the same folder the
 `packer.json` file is located in. This file can be added to Vagrant using
-`vagrant box add file.box` or can be shared with others using your own methods.
+`vagrant box add virtualbox.box` or can be shared with others using your own
+methods.
 
 ## What It Does
 
