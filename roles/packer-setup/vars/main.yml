@@ -110,7 +110,7 @@ pri_packer_setup_host_config:
     forwarded_port: 55985
 
     iso_wim_label: Windows Server 2012 R2 SERVERSTANDARD
-    bootstrap_start: update-wua
+    bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
   '2016':
@@ -122,8 +122,30 @@ pri_packer_setup_host_config:
     forwarded_port: 55986
 
     iso_wim_label: Windows Server 2016 SERVERSTANDARD
-    bootstrap_start: update-wua
+    bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
-  # TODO: 7-x86, 7-x64, 8.1-x86, 8.1-x64, 10-x86, 10-x64
-  # How should I do 10 now that there are cummulative updates within
+  '10-x86':
+    box_tag: jborean93/Windows
+
+    iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x86FRE_en-us.iso
+    iso_checksum: f2c39358d7186adae6825096c514edd6
+    guest_os_type: Windows10
+    forwarded_port: 55987
+
+    iso_wim_label: Windows 10 Enterprise Evaluation
+    bootstrap_start: winrm-listener
+    architecture: x86
+    answer_longhorn: no
+  '10-x64':
+    box_tag: jborean93/Windows
+
+    iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
+    iso_checksum: f4f85d77516721d9a19ca866172a5ecb
+    guest_os_type: Windows10_64
+    forwarded_port: 55988
+
+    iso_wim_label: Windows 10 Enterprise Evaluation
+    bootstrap_start: winrm-listener
+    architecture: amd64
+    answer_longhorn: no

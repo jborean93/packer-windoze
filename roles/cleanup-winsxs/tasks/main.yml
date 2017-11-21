@@ -15,28 +15,33 @@
     } else {
         "false"
     }
-  register: dism_supported
+  register: pri_cleanup_winsxs_dism_supported
 
 # Server 2016 fails on the first few runs, retry up to 5 times
 - name: run DISM with reset base on hosts that support it
   win_command: DISM.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
-  register: dism_cleanup_result
-  until: dism_cleanup_result.rc == 0
+  register: pri_cleanup_winsxs_cleanup_result
+  until: pri_cleanup_winsxs_cleanup_result.rc == 0
   retries: 5
   delay: 1
   ignore_errors: yes
-  when: dism_supported.stdout_lines[0] == "true"
+  when: pri_cleanup_winsxs_dism_supported.stdout_lines[0] == "true"
 
 - name: run DISM to clear service packs when not Server 2008
   win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded
-  when: os_version.stdout_lines[0] != '6.0-x86' and os_version.stdout_lines[0] != '6.0-AMD64'
+  when: man_host_type != "2008-x86" and man_host_type != "2008-x64"
 
 - name: run compcln to clear service packs for Server 2008
   win_command: compcln.exe /quiet
-  register: compcln_result
-  when: os_version.stdout_lines[0] == '6.0-x86' or os_version.stdout_lines[0] == '6.0-AMD64'
-  failed_when: compcln_result.rc != 0 and compcln_result.rc != -2147467259 # 0 is good the other is already run
+  register: pri_cleanup_winsxs_compcln_result
+  when: man_host_type == "2008-x86" or man_host_type == "2008-x64"
+  failed_when: pri_cleanup_winsxs_compcln_result.rc != 0 and pri_cleanup_winsxs_compcln_result.rc != -2147467259 # 0 is good the other is already run
 
-- name: setup and run cleanmgr if DISM reset base wasn't supported
+- name: check if cleanmgr.exe is natively available
+  win_stat:
+    path: C:\Windows\System32\cleanmgr.exe
+  register: pri_cleanup_winsxs_cleanmgr_available
+
+- name: setup and run cleanmgr if DISM reset base wasn't supported or cleanmgr is available
   include_tasks: cleanmgr.yml
-  when: dism_supported.stdout_lines[0] == "false"
+  when: pri_cleanup_winsxs_dism_supported.stdout_lines[0] == "false" or pri_cleanup_winsxs_cleanmgr_available.stat.exists == True

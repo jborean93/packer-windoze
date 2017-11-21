@@ -7,9 +7,9 @@
     type: dword
     state: present
     hive: C:\Users\Default\NTUSER.dat
-  register: profile_reg_change
+  register: pri_personalise_profile_reg_change
   # seems like this fails to unload in Packer for whatever reason, we don't want to fail if we got that error
-  failed_when: profile_reg_change|failed and "Failed to unload registry hive at ANSIBLE" not in profile_reg_change.msg
+  failed_when: pri_personalise_profile_reg_change|failed and "Failed to unload registry hive at ANSIBLE" not in pri_personalise_profile_reg_change.msg
   loop:
   - name: Hidden
     data: 1
@@ -19,11 +19,11 @@
 - name: check if ANSIBLE key was successfully unloaded
   win_reg_stat:
     path: HKLM:\ANSIBLE
-  register: reg_ansible_stat
+  register: pri_personalise_reg_ansible_stat
 
 - name: unload ANSIBLE key
   win_command: reg.exe unload HKLM\ANSIBLE
-  when: reg_ansible_stat.exists == True
+  when: pri_personalise_reg_ansible_stat.exists == True
 
 - name: set show hidden files/folders and file extensions for the current user profile
   win_regedit:

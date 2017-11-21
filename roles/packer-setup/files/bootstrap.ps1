@@ -319,6 +319,16 @@ switch($action) {
             Write-Log -message $error_message -level "ERROR"
             throw $error_message
         }
+        $winrm_service = Get-Service -Name winrm
+        if ($winrm_service.Status -ne "Running") {
+            try {
+                Start-Service -Name winrm
+            } catch {
+                $error_message = "failed to start WinRM service required by Ansible"
+                Write-Log -message $error_message -level "ERROR"
+                throw $error_message
+            }
+        }
 
         Write-Log -message "enabling RDP"
         $rdp_wmi = Get-CimInstance -ClassName Win32_TerminalServiceSetting -Namespace root\CIMV2\TerminalServices

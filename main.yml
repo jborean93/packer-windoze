@@ -4,15 +4,22 @@
   gather_facts: no
 
   pre_tasks:
-  - name: get major and minor version of Windows for later tasks
-    win_shell: |
-      $version = [Environment]::OSVersion.Version
-      Write-Host "$($version.Major).$($version.Minor)-$($env:PROCESSOR_ARCHITECTURE)"
-    register: os_version
+  - name: fail if mandatory vars are not set
+    assert:
+      that:
+      - ansible_become_method == "runas"
+      - ansible_become_user is defined
+      - man_host_type is defined
+  
+  - name: make sure the WinRM service is set to auto
+    win_service:
+      name: winrm
+      start_mode: auto
 
   roles:
   - update
   - personalise
+  #- cleanup-win10
   - cleanup-winsxs
   - cleanup-features
   - cleanup

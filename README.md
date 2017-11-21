@@ -148,8 +148,6 @@ evaluation time.
 
 * Windows Server Core images
 * Windows Server Nano images
-* Windows 7 32 and 64 bit
-* Windows 8.1 32 and 64 bit
 * Windows 10 32 and 64 bit
 * Look at supporting parallel builds
 * Look at slipstreaming Windows updates into the evaluation ISO's instead of running the updates from scratch each time

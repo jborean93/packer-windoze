@@ -5,11 +5,11 @@
     name: PagingFiles
     data: ""
     state: present
-  register: pagefile_removal
+  register: pri_cleanup_pagefile_removal
 
 - name: reboot server after clearing page file
   win_reboot:
-  when: pagefile_removal|changed
+  when: pri_cleanup_pagefile_removal|changed
 
 - name: cleanup the temp folders
   win_file:
@@ -29,16 +29,16 @@
 
 - name: see if Optimize-Volume cmdlet is available
   win_command: powershell.exe "Get-Command -Name Optimize-Volume"
-  register: defrag_cmdlet_available
+  register: pri_cleanup_defrag_cmdlet
   failed_when: False
 
 - name: defrag C with PS cmdlet
   win_command: powershell.exe "Optimize-Volume -DriveLetter C"
-  when: defrag_cmdlet_available.rc == 0
+  when: pri_cleanup_defrag_cmdlet.rc == 0
 
 - name: defrag C with legacy exe
   win_command: 'Defrag.exe C:'
-  when: defrag_cmdlet_available.rc != 0
+  when: pri_cleanup_defrag_cmdlet.rc != 0
 
 - name: 0 out empty space for later compression
   win_shell: |

@@ -10,10 +10,10 @@
   win_updates:
     category_names: '{{update_stat|categories_to_list}}'
     state: installed
-  register: final_update
+  register: pri_update_final
   when: loop_number == 'end'
 
 - name: reboot after final update task
   win_reboot:
     reboot_timeout: 1200
-  when: final_update.reboot_required is defined and final_update.reboot_required == True
+  when: pri_update_final.reboot_required is defined and pri_update_final.reboot_required == True
