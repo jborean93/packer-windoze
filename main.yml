@@ -24,3 +24,6 @@
   - cleanup-features
   - cleanup
   - sysprep
+
+# TODO: TLSv1.2 for Server 2008 R2
+# Remove screensaver for Server 2008

@@ -1,7 +1,5 @@
 # packer-windoze
 
-_This is still a work in progress and some things are subject to change_
-
 This repo contains code that can generate Packer templates designed to build
 and package Windows templates for use with Vagrant boxes. The overall goal is
 to cover all supported Windows OS' included Windows Server, Server Core,
@@ -15,6 +13,11 @@ Each image is designed to be;
 * Contain minimal tools useful for Windows development such as the sysinternals suite
 * Enable WinRM (HTTP and HTTPS) and RDP on creation in Vagrant allowing other tools to interact with a new image without manual interaction
 * Each image contain the maximum amount of time available on a Windows evaluation image (usually 180 days) without prompting for a key
+
+The blog post [Using Packer to Create Windows Images](http://www.bloggingforlogging.com/2017/11/23/using-packer-to-create-windows-images/)
+contain a more detailed guide on this process and how it all works. Feel free
+to read through it if you want to understand each component and how they fit
+together more.
 
 ## Requirements
 
