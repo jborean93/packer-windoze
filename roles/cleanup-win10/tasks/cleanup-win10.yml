@@ -80,7 +80,7 @@
         Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like $app } | Remove-AppxProvisionedPackage -Online
     }
   register: pri_cleanup_win10_remove
-  until: pri_cleanup_win10_remove|success
+  until: pri_cleanup_win10_remove is successful
   retries: 3
   delay: 1
 

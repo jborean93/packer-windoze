@@ -28,6 +28,12 @@
     pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("product_key", opt_packer_setup_product_key)}}'
   when: opt_packer_setup_product_key is defined
 
+- name: assert that iso_url is set or overriden with opt_packer_setup_iso_path
+  assert:
+    that:
+    - pri_packer_setup_config.iso_url is defined
+    msg: opt_packer_setup_iso_path must be defined is the URL is not supplied in the default vars
+
 - name: create the packer build folder for the packer files
   file:
     path: '{{man_packer_setup_host_type}}'
@@ -50,7 +56,9 @@
       access_token: '{{opt_packer_setup_access_token}}'
       box_tag: '{{opt_packer_setup_box_tag}}'
       version: '{{opt_packer_setup_version}}'
-  when: opt_packer_setup_access_token is defined and opt_packer_setup_version is defined
+  when:
+  - opt_packer_setup_access_token is defined
+  - opt_packer_setup_version is defined
 
 - name: create packer.json file based on vars set
   copy:
@@ -71,6 +79,11 @@
   template:
     dest: '{{man_packer_setup_host_type}}/hosts.ini'
     src: hosts.ini.j2
+
+- name: template out the Vagrantfile template
+  template:
+    dest: '{{man_packer_setup_host_type}}/vagrantfile.template'
+    src: vagrantfile.template.j2
 
 - name: show user how to run packer build after this completes
   debug:

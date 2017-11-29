@@ -1,0 +1,87 @@
+$ErrorActionPreference = 'Stop'
+
+$runonce_reg_key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+$ps_path = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+$tmp_dir = "$env:SystemDrive\temp"
+
+Function Write-Log($message, $level="INFO") {
+    $date_stamp = Get-Date -Format s
+    $log_entry = "$date_stamp - $level - $message"
+    $log_file = "$tmp_dir\sysprep-setup.log"
+    Write-Host $log_entry
+    Add-Content -Path $log_file -Value $log_entry
+}
+
+$action = $args[0]
+switch($action) {
+    "post-sysprep" {
+        Write-Log -message "Deleting packer shutdown scheduled task"
+        &schtasks.exe /Delete /TN "packer-shutdown" /F
+
+        Write-Log -message "Removing the sysprep files as they are no longer needed"
+        Remove-Item -Path C:\Windows\Panther\Unattend -Force -Recurse > $null
+
+        Write-Log -message "Disabling the Administrator account as it is not needed"
+        &cmd.exe /c net user Administrator /active:no
+
+{% if man_is_longhorn == False %}
+        Write-Log -message "Generate new pair of SSH host keys"
+        $architecture = $env:PROCESSOR_ARCHITECTURE
+        if ($architecture -eq "AMD64") {
+            $openssh_path = "C:\Program Files\OpenSSH-Win64"
+        } else {
+            $openssh_path = "C:\Program Files\OpenSSH-Win32"
+        }
+        Set-Location -Path $openssh_path
+        &"$openssh_path\ssh-keygen.exe" -A
+
+        Write-Log -message "Fix SSH host keys permissions"
+        ."$openssh_path\FixHostFilePermissions.ps1" -Confirm:$false
+
+        Write-Log -message "Starting ssh-agent service if it hasnt already been started"
+        Start-Service -Name ssh-agent
+
+        Write-Log -message "Registering host keys with SYSTEM account"
+        $host_keys = @(
+            "ssh_host_dsa_key",
+            "ssh_host_rsa_key",
+            "ssh_host_ecdsa_key",
+            "ssh_host_ed25519_key"
+        )
+        foreach ($host_key in $host_keys) {
+            &psexec.exe @("-accepteula", "-i", "-s", "$openssh_path\ssh-add.exe", "$openssh_path\$host_key")
+            Remove-Item -Path $host_key -Force
+        }
+{% endif %}
+
+        Write-Log -message "Rearming the host using slmgr.vbs /rearm"
+        &C:\Windows\System32\cscript.exe C:\Windows\System32\slmgr.vbs /rearm
+
+        Write-Log -message "Restarting the host to rerun script with action winrm-active"
+        $command = "$ps_path $($script:MyInvocation.MyCommand.Path) winrm-active"
+        Set-ItemProperty -Path $runonce_reg_key -Name "bootstrap" -Value $command
+        Restart-Computer -Force
+    }
+    "winrm-active" {
+        Write-Log -message "Deleting auto logon entries from registry"
+        $reg_winlogon_path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+        Set-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon -Value 0
+        Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultUserName -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultPassword -ErrorAction SilentlyContinue
+
+        Write-Log -message "Setting the rearm key back to 0 so people in the future can rearm the OS"
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform" -Name SkipRearm -Value 0
+
+        Write-Log -message "Recreate the WinRM listeners"
+        PowerShell.exe -ExecutionPolicy ByPass -File "$tmp_dir\ConfigureRemotingForAnsible.ps1" -EnableCredSSP
+
+        #Write-Log -message "Setting reg key to cleanup the temp folder on next logon"
+        #Set-ItemProperty -Path  $runonce_reg_key -Name "cleanup" -Value "$ps_path Remove-Item -Path $tmp_dir -Recurse -Force; New-Item -Path $tmp_dir -ItemType Directory"
+
+        Write-Log -message "Cleaning up C:\temp and logging off"
+        Remove-Item -Path C:\temp -Force -Recurse
+        New-Item -Path C:\temp -ItemType Directory
+
+        &cmd.exe /c logoff
+    }
+}

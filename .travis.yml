@@ -1,0 +1,15 @@
+language: python
+
+python:
+- "2.7"
+
+install:
+- pip install pip setuptools
+- pip install -U pip setuptools
+- pip install ansible-lint
+
+script:
+# show the ansible-lint version
+- ansible-lint --version
+- ansible-lint packer-setup.yml
+- ansible-lint main.yml

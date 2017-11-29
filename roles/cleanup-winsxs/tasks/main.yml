@@ -29,13 +29,17 @@
 
 - name: run DISM to clear service packs when not Server 2008
   win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded
-  when: man_host_type != "2008-x86" and man_host_type != "2008-x64"
+  when:
+  - man_host_type != "2008-x86"
+  - man_host_type != "2008-x64"
 
 - name: run compcln to clear service packs for Server 2008
   win_command: compcln.exe /quiet
   register: pri_cleanup_winsxs_compcln_result
   when: man_host_type == "2008-x86" or man_host_type == "2008-x64"
-  failed_when: pri_cleanup_winsxs_compcln_result.rc != 0 and pri_cleanup_winsxs_compcln_result.rc != -2147467259 # 0 is good the other is already run
+  failed_when:
+  - pri_cleanup_winsxs_compcln_result.rc != 0
+  - pri_cleanup_winsxs_compcln_result.rc != -2147467259 # means it has already been run
 
 - name: check if cleanmgr.exe is natively available
   win_stat:

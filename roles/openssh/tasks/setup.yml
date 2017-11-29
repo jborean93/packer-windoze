@@ -1,0 +1,67 @@
+# While this install the OpenSSH service more work needs to be done to set up
+# the host keys, this is done after sysprep and not in the role
+---
+- name: set install path for 64 bit Windows
+  set_fact:
+    pri_openssh_install_path: C:\Program Files\OpenSSH-Win64
+  when: man_host_architecture == 'amd64'
+
+- name: set install path for 32 bit Windows
+  set_fact:
+    pri_openssh_install_path: C:\Program Files\OpenSSH-Win32
+  when: man_host_architecture == 'x86'
+
+- name: check if OpenSSH has been downloaded and extracted
+  win_stat:
+    path: '{{pri_openssh_install_path}}'
+  register: pri_openssh_folder
+
+- block:
+  - name: download Win32-OpenSSH v0.0.23.0 from GitHub - x64
+    win_get_url:
+      url: https://github.com/PowerShell/Win32-OpenSSH/releases/download/v0.0.23.0/OpenSSH-Win64.zip
+      dest: C:\temp\OpenSSH-Win.zip
+    when: man_host_architecture == 'amd64'
+
+  - name: download Win32-OpenSSH v0.0.23.0 from GitHub - x86
+    win_get_url:
+      url: https://github.com/PowerShell/Win32-OpenSSH/releases/download/v0.0.23.0/OpenSSH-Win32.zip
+      dest: C:\temp\OpenSSH-Win.zip
+    when: man_host_architecture == 'x86'
+
+  - name: extract the Win32-OpenSSH folder
+    win_unzip:
+      src: C:\temp\OpenSSH-Win.zip
+      dest: C:\Program Files
+  when: pri_openssh_folder.stat.exists == False
+
+- name: check if the sshd and ssh-agent services are installed
+  win_service:
+    name: '{{item}}'
+  register: pri_openssh_service
+  changed_when: pri_openssh_service.exists == False  # we want to register a change for the steps below
+  loop:
+  - sshd
+  - ssh-agent
+
+- name: install the sshd and ssh-agent service
+  win_command: powershell.exe -ExecutionPolicy ByPass -File "{{pri_openssh_install_path}}\install-sshd.ps1"
+  when: pri_openssh_service is changed
+
+- name: set sshd and ssh-agent to auto-start
+  win_service:
+    name: '{{item}}'
+    start_mode: auto
+  loop:
+  - sshd
+  - ssh-agent
+
+- name: open port 22 for inbound SSH connections
+  win_firewall_rule:
+    name: Win32-OpenSSH inbound
+    protocol: tcp
+    localport: 22
+    direction: in
+    action: allow
+    state: present
+    enabled: yes

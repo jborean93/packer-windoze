@@ -81,6 +81,7 @@ You can set the host type to the following values
 * `2012`: Windows Server 2012 Standard
 * `2012r2`: Windows Server 2012 R2 Standard
 * `2016`: Windows Server 2016 Standard
+* `1709`: Windows Server Build 1709 Standard (Requires ISO to be manually downloaded)
 
 #### Optional Variables
 
@@ -135,17 +136,12 @@ Here is a brief step by step overview of what actually happens with the images
 8. Will try to cleanup as much of the WinSXS folder as possible (older hosts are limited in how much it can do)
 9. Will remove all non enabled Features if Features on Demand is supported (Server 2012 and newer)
 10. Remove pagefile, temp files, log files that are not needed. Defrags the disk and 0's out empty space for the compression to work properly
-11. Setup the sysprep files and add flags for Windows to automatically run sysprep on the next login
-12. Remove the WinRM listeners and shutdown the host
+11. Setup the sysprep template files
+12. Remove the WinRM listeners and run the sysprep process to shutdown the host
 
 From this point Packer will create an image of the OS which can be used by
-Vagrant. Due to the actions above, when Vagrant first starts up the image it
-will automatically log on and start the sysprep process. It will reboot and on
-the next startup, recreate the WinRM listeners and end the startup process.
-
-Because the sysprep happens straight after Vagrant starts the image, the launch
-time is a bit longer than normal but the full 180 days will be available in the
-evaluation time.
+Vagrant. When Vagrant first starts up the image, it will automatically log on
+and, rearm the activation key and recreate the WinRM listeneres.
 
 ## Backlog/Future Work
 

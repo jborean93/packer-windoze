@@ -9,12 +9,15 @@ Vagrantfile
 # Ansible files
 hosts-*
 *.retry
+
+# Temp Packer files
 2008-x86/
 2008-x64/
 2008r2/
 2012
 2012r2/
 2016/
+1709/
 10-x86/
 10-x64/
 
