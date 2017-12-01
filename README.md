@@ -151,3 +151,4 @@ and, rearm the activation key and recreate the WinRM listeneres.
 * Look at supporting parallel builds
 * Look at slipstreaming Windows updates into the evaluation ISO's instead of running the updates from scratch each time
 * Look at supporting local WSUS servers during the Update phase to save time and bandwidth
+* Automatically use generated template file for the description when uploading box
