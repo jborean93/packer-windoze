@@ -14,7 +14,7 @@ Function Write-Log($message, $level="INFO") {
 
 Function Reboot-AndResume($action) {
     # need to reboot the server and rerun this script at the next action
-    $command = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe A:\bootstrap.ps1 $action"
+    $command = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe $($script:MyInvocation.MyCommand.Path) $action"
     $reg_key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
     $reg_property_name = "bootstrap"
     Set-ItemProperty -Path $reg_key -Name $reg_property_name -Value $command

@@ -43,7 +43,7 @@
   - name: reboot server after update install or there was a failure - {{category_info.name}}
     win_reboot:
       reboot_timeout: 1200
-    when: pri_update_result|failed or pri_update_result.reboot_required is defined and pri_update_result.reboot_required == True
+    when: pri_update_result is failed or pri_update_result.reboot_required is defined and pri_update_result.reboot_required == True
 
   # running this command seems to wait before returning if Windows is still
   # configuring updates, done to try and mitigate post reboot reboots
@@ -51,7 +51,7 @@
     win_shell: (New-Object -ComObject Microsoft.Update.Session).CreateUpdateInstaller().IsBusy
     become: yes
     ignore_errors: yes
-  
+
   - name: make sure connection is back online before continuing
     wait_for_connection:
 

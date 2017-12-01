@@ -9,7 +9,7 @@
 
 - name: reboot server after clearing page file
   win_reboot:
-  when: pri_cleanup_pagefile_removal|changed
+  when: pri_cleanup_pagefile_removal is changed
 
 - name: cleanup the temp folders
   win_file:

@@ -7,7 +7,7 @@ pri_packer_setup_json:
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--vram", "48" ]
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--cpus", "2" ]
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--natpf1", "winrm,tcp,127.0.0.1,{{pri_packer_setup_config.forwarded_port}},,5986" ]
-    guest_additions_mode: "disable"
+    guest_additions_mode: "attach"
     guest_os_type: '{{pri_packer_setup_config.guest_os_type}}'
     headless: '{{opt_packer_setup_headless}}'
     iso_url: '{{pri_packer_setup_config.iso_url}}'
@@ -36,6 +36,7 @@ pri_packer_setup_json:
 pri_packer_setup_post_processors:
   type: vagrant
   output: "{{man_packer_setup_host_type}}/virtualbox.box"
+  vagrantfile_template: "{{man_packer_setup_host_type}}/vagrantfile.template"
 
 # host settings like url's, checksums, vbox types, etc
 #   iso_url: The URL of the evaluation ISO
@@ -125,25 +126,37 @@ pri_packer_setup_host_config:
     bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
+  '1709':
+    box_tag: WindowsServer1709
+
+    # no evaluation ISO is available, end user must supply the path to a local ISO file
+    iso_checksum: 7c73ce30c3975652262f794fc35127b5
+    guest_os_type: Windows2016_64
+    forwarded_port: 55987
+
+    iso_wim_label: Windows Server 2016 SERVERSTANDARDACORE
+    bootstrap_start: winrm-listener
+    architecture: amd64
+    answer_longhorn: no
   '10-x86':
-    box_tag: jborean93/Windows
+    box_tag: jborean93/Windows10-x86
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x86FRE_en-us.iso
     iso_checksum: f2c39358d7186adae6825096c514edd6
     guest_os_type: Windows10
-    forwarded_port: 55987
+    forwarded_port: 55988
 
     iso_wim_label: Windows 10 Enterprise Evaluation
     bootstrap_start: winrm-listener
     architecture: x86
     answer_longhorn: no
   '10-x64':
-    box_tag: jborean93/Windows
+    box_tag: jborean93/Windows10-x64
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
     iso_checksum: f4f85d77516721d9a19ca866172a5ecb
     guest_os_type: Windows10_64
-    forwarded_port: 55988
+    forwarded_port: 55989
 
     iso_wim_label: Windows 10 Enterprise Evaluation
     bootstrap_start: winrm-listener

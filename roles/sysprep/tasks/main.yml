@@ -1,10 +1,4 @@
 ---
-- name: assert mandatory variables have been set
-  assert:
-    that:
-    - man_sysprep_architecture is defined
-    - man_sysprep_is_longhorn is defined
-
 - name: ensure unattend panther and temp directory exists
   win_file:
     path: '{{item}}'
@@ -24,17 +18,9 @@
     dest: C:\Windows\Panther\Unattend\unattend.xml
 
 - name: copy across the sysprep powershell script
-  win_copy:
-    src: setup.ps1
+  win_template:
+    src: setup.ps1.tmpl
     dest: C:\temp\setup.ps1
-
-- name: add run once script, to run once vagrant initialises and start the sysprep
-  win_regedit:
-    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
-    name: sysprep
-    data: C:\windows\system32\sysprep\sysprep.exe /generalize /oobe /quiet /reboot /unattend:C:\Windows\Panther\Unattend\unattend.xml
-    type: string
-    state: present
 
 - name: create scheduled task to delete WinRM listeners and shutdown
   win_scheduled_task:
@@ -45,10 +31,10 @@
     actions:
     - path: powershell.exe
       arguments: Remove-Item -Path WSMan:\localhost\Listener\* -Recurse -Force
-    - path: cmd.exe
-      arguments: /c shutdown /s /t 5
-    - path: schtasks.exe
-      arguments: /Delete /TN "packer-shutdown" /F
+    - path: powershell.exe
+      arguments: Remove-Item -Path Cert:\LocalMachine\My\* -Force
+    - path: C:\windows\system32\sysprep\sysprep.exe
+      arguments: /generalize /oobe /quiet /shutdown /unattend:C:\Windows\Panther\Unattend\unattend.xml
 
 - name: set flag to recreate pagefile after next sysprep
   win_shell: |

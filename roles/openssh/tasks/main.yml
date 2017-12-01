@@ -1,0 +1,4 @@
+---
+- name: setup Win32-OpenSSH on all hosts but Server 2008
+  include_tasks: setup.yml
+  when: not man_is_longhorn

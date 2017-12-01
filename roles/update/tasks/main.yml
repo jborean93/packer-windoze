@@ -20,7 +20,8 @@
 # have exhausted the updates for the respective category. This is only done
 # win_updates sometimes fails when too many updates need to be installed. This
 # way each update block is split into smaller chunks.
-- set_fact:
+- name: set initial update_stat fact
+  set_fact:
     update_stat:
     - name: CriticalUpdates
       finished: False
