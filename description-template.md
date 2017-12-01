@@ -1,4 +1,4 @@
-## Packer Windoze ### HOST TYPE HERE ###
+## [Packer Windoze](https://github.com/jborean93/packer-windoze) ### HOST TYPE HERE ###
 
 ### Info
 
