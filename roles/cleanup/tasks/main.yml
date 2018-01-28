@@ -15,6 +15,7 @@
   win_file:
     path: '{{item}}'
     state: absent
+  ignore_errors: yes  # doesn't matter too much if these fail
   loop:
   - C:\Temp
   - C:\Windows\Panther
