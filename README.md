@@ -23,6 +23,7 @@ together more.
 
 To use the scripts in this repo you will need the following;
 
+* [pywinrm](https://pypi.org/project/pywinrm)
 * [Packer](https://www.packer.io/docs/install/index.html) >= 1.0.0
 * [VirtualBox](https://www.virtualbox.org/wiki/Downloads) >= 5.1.12
 * [Ansible](https://github.com/ansible/ansible) >= 2.5 or devel
