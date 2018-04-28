@@ -24,34 +24,13 @@ switch($action) {
         Write-Log -message "Disabling the Administrator account as it is not needed"
         &cmd.exe /c net user Administrator /active:no
 
+        Write-Log -message "Disabling the password expiration of the {{ansible_user}} account"
+        &cmd.exe @("/c", "WMIC", "USERACCOUNT", "WHERE", "Name='{{ansible_user}}'", "SET", "PasswordExpires=FALSE")
+
 {% if man_is_longhorn == False %}
-        Write-Log -message "Generate new pair of SSH host keys"
-        $architecture = $env:PROCESSOR_ARCHITECTURE
-        if ($architecture -eq "AMD64") {
-            $openssh_path = "C:\Program Files\OpenSSH-Win64"
-        } else {
-            $openssh_path = "C:\Program Files\OpenSSH-Win32"
-        }
-        Set-Location -Path $openssh_path
-        &"$openssh_path\ssh-keygen.exe" -A
-
-        Write-Log -message "Fix SSH host keys permissions"
-        ."$openssh_path\FixHostFilePermissions.ps1" -Confirm:$false
-
-        Write-Log -message "Starting ssh-agent service if it hasnt already been started"
-        Start-Service -Name ssh-agent
-
-        Write-Log -message "Registering host keys with SYSTEM account"
-        $host_keys = @(
-            "ssh_host_dsa_key",
-            "ssh_host_rsa_key",
-            "ssh_host_ecdsa_key",
-            "ssh_host_ed25519_key"
-        )
-        foreach ($host_key in $host_keys) {
-            &psexec.exe @("-accepteula", "-i", "-s", "$openssh_path\ssh-add.exe", "$openssh_path\$host_key")
-            Remove-Item -Path $host_key -Force
-        }
+        Write-Log -message "Setting sshd services to auto start"
+        Set-Service -Name sshd -StartupType Automatic
+        Set-Service -Name ssh-agent -StartupType Automatic
 {% endif %}
 
         Write-Log -message "Rearming the host using slmgr.vbs /rearm"
@@ -73,10 +52,7 @@ switch($action) {
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform" -Name SkipRearm -Value 0
 
         Write-Log -message "Recreate the WinRM listeners"
-        PowerShell.exe -ExecutionPolicy ByPass -File "$tmp_dir\ConfigureRemotingForAnsible.ps1" -EnableCredSSP
-
-        #Write-Log -message "Setting reg key to cleanup the temp folder on next logon"
-        #Set-ItemProperty -Path  $runonce_reg_key -Name "cleanup" -Value "$ps_path Remove-Item -Path $tmp_dir -Recurse -Force; New-Item -Path $tmp_dir -ItemType Directory"
+        PowerShell.exe -ExecutionPolicy ByPass -File "$tmp_dir\setup_winrm.ps1" -Verbose
 
         Write-Log -message "Cleaning up C:\temp and logging off"
         Remove-Item -Path C:\temp -Force -Recurse

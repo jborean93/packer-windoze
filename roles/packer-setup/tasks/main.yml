@@ -55,10 +55,10 @@
     - type: vagrant-cloud
       access_token: '{{opt_packer_setup_access_token}}'
       box_tag: '{{opt_packer_setup_box_tag}}'
-      version: '{{opt_packer_setup_version}}'
+      version: '{{opt_packer_setup_version|default(pri_packer_setup_changelog[0].version)}}'
+      version_description: "{{lookup('template', 'description.md.tmpl')}}"
   when:
   - opt_packer_setup_access_token is defined
-  - opt_packer_setup_version is defined
 
 - name: create packer.json file based on vars set
   copy:
@@ -84,6 +84,18 @@
   template:
     dest: '{{man_packer_setup_host_type}}/vagrantfile.template'
     src: vagrantfile.template.j2
+
+# this isn't strictly used in the process but does test out the description
+# templater
+- name: template out the description for the box
+  template:
+    dest: '{{man_packer_setup_host_type}}/description.md'
+    src: description.md.tmpl
+
+- name: generate the main CHANGELOG.md
+  template:
+    dest: CHANGELOG.md
+    src: CHANGELOG.md.tmpl
 
 - name: show user how to run packer build after this completes
   debug:

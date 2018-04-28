@@ -1,3 +1,46 @@
+# this creates the changelog in the description for the Vagrant box
+pri_packer_setup_changelog:
+- version: v0.0.3
+  date: TBD
+  changes:
+  - Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
+  - Set the builtin `vagrant` account password to never expire
+  - Stop using the Ansible ConfigureRemotingForAnsible.ps1 script, swap over to custom script to support SHA256 and simplify steps
+  host_specific_changes:
+    2008-x64:
+    - Enabled TLSv1.2 client support, server is still disabled by default
+    2008-x86:
+    - Enabled TLSv1.2 client support, server is still disabled by default
+- version: v0.0.2
+  date: 2017-12-01
+  changes:
+  - Create a custom Vagrantfile template for the final image that includes the username and other required settings
+  - Moved sysprep process before the image is created
+  - Added `slmgr.vbs /rearm` to run just after Vagrant starts the image to get the full evaluation period possible
+  - Removed SSL certificates that were created during the packer build process
+  - Installed [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH) v0.0.23.0 on all images eacept Server 2008
+  - Added .travis-ci file to run [ansible-lint](https://github.com/willthames/ansible-lint) on the Ansible files for some testing sanity
+  - Decided to install the VirtualBox guest additions tools as part fo the build process
+  - Added vim to the list of chocolatey packages to help with Core OS installs or connecting via SSH
+  host_specific_changes:
+    1709:
+    - Added support for Windows Server 1709
+    - This won't be available in Vagrant Cloud as it is not avaible as a public evaluation ISO
+    2016:
+    - Will not remove Features on Demand until [this](https://social.msdn.microsoft.com/Forums/en-US/2ad1c1d9-09ba-407e-ba03-951c6f2baa34/features-on-demand-server-2016-source-not-found?forum=ws2016) is resolved
+    2008r2:
+    - Enabled TLSv1.2 cipher support for both the client and server components
+    2008-x64:
+    - Disabled screensaver to stop auto logoff by default
+    - Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
+    2008-x86:
+    - Disabled screensaver to stop auto logoff by default
+    - Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
+- version: v0.0.1
+  date: 2017-10-29
+  changes:
+  - First images built by this process
+
 # this is a yaml definiton of the JSON packer file
 pri_packer_setup_json:
   builders:
@@ -6,7 +49,7 @@ pri_packer_setup_json:
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--memory", "2048" ]
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--vram", "48" ]
     - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--cpus", "2" ]
-    - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--natpf1", "winrm,tcp,127.0.0.1,{{pri_packer_setup_config.forwarded_port}},,5986" ]
+    - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--natpf1", "winrm,tcp,127.0.0.1,{{pri_packer_setup_config.forwarded_port}},,5985" ]
     guest_additions_mode: "attach"
     guest_os_type: '{{pri_packer_setup_config.guest_os_type}}'
     headless: '{{opt_packer_setup_headless}}'
@@ -16,9 +59,7 @@ pri_packer_setup_json:
     communicator: winrm
     winrm_username: '{{opt_packer_setup_username}}'
     winrm_password: '{{opt_packer_setup_password}}'
-    winrm_port: '5986'
-    winrm_use_ssl: true
-    winrm_insecure: true
+    winrm_port: '5985'
     shutdown_command: schtasks.exe /Run /TN "packer-shutdown"
     shutdown_timeout: 15m
     floppy_files:

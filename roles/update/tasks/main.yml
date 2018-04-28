@@ -1,4 +1,11 @@
 ---
+- name: set registry flag that shows updates for compatible anti-viruses
+  win_regedit:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\QualityCompat
+    name: cadca5fe-87d3-4b96-b7fb-a231484277cc
+    data: 0
+    type: dword
+
 - name: enable verbose logging (WUA seems to fail on some installs without this)
   win_regedit:
     path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Trace

@@ -1,59 +1,46 @@
 ## Packer Windoze Image Changelog
 
+_Note: This changelog is generated as part of the packer-setup role. Please add
+changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
+
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v0.0.3 - TBD
+
+* Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
+* Set the builtin `vagrant` account password to never expire
+* Stop using the Ansible ConfigureRemotingForAnsible.ps1 script, swap over to custom script to support SHA256 and simplify steps
+* 2008-x64
+    * Enabled TLSv1.2 client support, server is still disabled by default
+* 2008-x86
+    * Enabled TLSv1.2 client support, server is still disabled by default
+
 ### v0.0.2 - 2017-12-01
 
-#### All
-
-* Create a custom Vagrantfile template for the final image that includes the
-  username and other required settings
+* Create a custom Vagrantfile template for the final image that includes the username and other required settings
 * Moved sysprep process before the image is created
-* Added `slmgr.vbs /rearm` to run just after Vagrant starts the image up to get
-  the full eval period possible.
-* Removed SSL certificate installed during Packer build process
-* Installed [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH)
-  v.0.0.23.0 on all images and set to start by default for all hosts except
-  Server 2008
-* Added .travis-ci file to run [ansible-lint](https://github.com/willthames/ansible-lint)
-  on the Ansible files for some testing sanity
-* Decided to install the virtualbox guest additions tools as part of the build
-  process.
-* Added vim to the list of chocolatey packages to help with Core OS installs or
-  connecting via SSH
-
-
-#### Server 1709
-
-* Added support for Windows Server, version 1709, under the host type value of
-  `1709`
-* This is the first build from the new Windows Server Semi-Annual update
-  release cycle and won't be supported as often as the LTSB release of Server
-  2016
-* Desktop Experience is not installed with this pack so only core is available
-* Note: This won't be available in Vagrant Cloud as it is currently closed off
-  to the public. If you can download the ISO manually then you can build your
-  own private image by setting `opt_packer_setup_iso_path`. This will be the
-  case until Microsoft release an evaluation ISO on their evaluation centre.
-
-#### Server 2016
-
-* Will not remove the Features on Demand for Server 2016 until [this](https://social.msdn.microsoft.com/Forums/en-US/2ad1c1d9-09ba-407e-ba03-951c6f2baa34/features-on-demand-server-2016-source-not-found?forum=ws2016)
-  is resolved.
-
-#### Server 2008 R2
-
-* Enabled TLSv1.2 cipher support for both client and server components
-
-#### Server 2008
-
-* Disabled screensaver to stop auto logoff by default
-* Ensure the TLSv1.2 cipher support package is installed but does not enable
-  them, pywinrm fails to work with this enabled and will have to figure the
-  reason why before enabling this in a future version
-
+* Added `slmgr.vbs /rearm` to run just after Vagrant starts the image to get the full evaluation period possible
+* Removed SSL certificates that were created during the packer build process
+* Installed [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH) v0.0.23.0 on all images eacept Server 2008
+* Added .travis-ci file to run [ansible-lint](https://github.com/willthames/ansible-lint) on the Ansible files for some testing sanity
+* Decided to install the VirtualBox guest additions tools as part fo the build process
+* Added vim to the list of chocolatey packages to help with Core OS installs or connecting via SSH
+* 1709
+    * Added support for Windows Server 1709
+    * This won't be available in Vagrant Cloud as it is not avaible as a public evaluation ISO
+* 2016
+    * Will not remove Features on Demand until [this](https://social.msdn.microsoft.com/Forums/en-US/2ad1c1d9-09ba-407e-ba03-951c6f2baa34/features-on-demand-server-2016-source-not-found?forum=ws2016) is resolved
+* 2008r2
+    * Enabled TLSv1.2 cipher support for both the client and server components
+* 2008-x64
+    * Disabled screensaver to stop auto logoff by default
+    * Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
+* 2008-x86
+    * Disabled screensaver to stop auto logoff by default
+    * Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
 
 ### v0.0.1 - 2017-10-29
 
-* First images built by this repo
+* First images built by this process
+

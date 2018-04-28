@@ -6,6 +6,7 @@
       - '{{category_info.name}}'
       state: searched
     register: pri_update_count
+    become: yes
     when: category_info.finished == False
 
   rescue:
@@ -24,35 +25,20 @@
       - '{{category_info.name}}'
       state: searched
     register: pri_update_count
+    become: yes
 
 - name: set no more update flag for {{category_info.name}} if not more updates and it isn't the 1st 2 iterations
   set_fact:
     update_stat: '{{update_stat|update_merge(category_info.name, True)}}'
   when: pri_update_count.found_update_count is defined and pri_update_count.found_update_count == 0 and (loop_number != 1 and loop_number != 2)
 
-- name: block to install updates and reboot if required
-  block:
-  - name: install windows updates - {{category_info.name}}
-    win_updates:
-      category_names:
-      - '{{category_info.name}}'
-      state: installed
-    ignore_errors: yes # get intermittent errors with this, usually 2nd round succeeds so let's ignore it
-    register: pri_update_result
-
-  - name: reboot server after update install or there was a failure - {{category_info.name}}
-    win_reboot:
-      reboot_timeout: 2400
-    when: pri_update_result is failed or pri_update_result.reboot_required is defined and pri_update_result.reboot_required == True
-
-  # running this command seems to wait before returning if Windows is still
-  # configuring updates, done to try and mitigate post reboot reboots
-  - name: check if Windows Update is busy
-    win_shell: (New-Object -ComObject Microsoft.Update.Session).CreateUpdateInstaller().IsBusy
-    become: yes
-    ignore_errors: yes
-
-  - name: make sure connection is back online before continuing
-    wait_for_connection:
-
+- name: install windows updates - {{category_info.name}}
+  win_updates:
+    category_names:
+    - '{{category_info.name}}'
+    state: installed
+    reboot: yes
+  ignore_errors: yes # get intermittent errors with this, usually 2nd round succeeds so let's ignore it
+  become: yes
+  register: pri_update_result
   when: pri_update_count.found_update_count is defined and pri_update_count.found_update_count > 0

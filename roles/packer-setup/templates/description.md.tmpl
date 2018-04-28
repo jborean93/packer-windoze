@@ -1,4 +1,4 @@
-## [Packer Windoze](https://github.com/jborean93/packer-windoze) ### HOST TYPE HERE ###
+## [Packer Windoze](https://github.com/jborean93/packer-windoze) - {{pri_packer_setup_config.box_tag}}
 
 ### Info
 
@@ -9,8 +9,8 @@ and create a brand new Windows instance with WinRM up and running.
 
 Details on how to connect are;
 
-* `username`: vagrant
-* `password`: vagrant
+* `username`: {{opt_packer_setup_username}}
+* `password`: {{opt_packer_setup_password}}
 * `connector`: winrm
 
 Included programs (versions dependent on the Windows version);
@@ -27,25 +27,27 @@ Included programs (versions dependent on the Windows version);
 Other configurations from the standard image;
 
 * WinRM HTTP and HTTPS listener with Basic and CredSSP enabled
-* [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH) v0.0.23.0 - Except on Server 2008 SP2 images
-* Default Administrator account disabled, password is also `vagrant`
+{% if not pri_packer_setup_config.answer_longhorn %}
+* [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH) v7.6.1.0p1-Beta
+{% endif %}
+* Default Administrator account disabled, password is also `{{opt_packer_setup_password}}`
 * Hidden files and folders and file extensions are shown by default
 
 ### Changes
 
-See [packer-windoze CHANGELOG.md](https://github.com/jborean93/packer-windoze/blob/master/CHANGELOG.md)
-for more info
+{% for version_entry in pri_packer_setup_changelog %}
+#### {{version_entry.version}} - {{version_entry.date}}
 
-* Vagrantfile template is now associated with each image
-* Sysprep is now run before the image is created saving time when starting up
-  a box
-* Evaluation is rearmed after image is started to get the full trial
-* Removed the SSL HTTPS certificate created during the Packer build as it is
-  redundant after that
-* Install Win32-OpenSSH and set to start that when the image is created, this
-  is not done with Server 2008 SP2 as it does not work on this version
-* Installed the VirtualBox Guest Additions in the image
-* Added Vim to the list of installed programs so the core image is more useful
+{% for change in version_entry.changes %}
+* {{change}}
+{% endfor %}
 
-Version specific changes;
+{% if version_entry.host_specific_changes is defined and man_packer_setup_host_type in version_entry.host_specific_changes.keys() %}
+Specific changes to this host type
 
+{% for change in version_entry.host_specific_changes[man_packer_setup_host_type] %}
+* {{change}}
+{% endfor %}
+
+{% endif %}
+{% endfor %}

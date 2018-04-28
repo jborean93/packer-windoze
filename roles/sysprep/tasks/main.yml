@@ -7,10 +7,10 @@
   - C:\Windows\Panther\Unattend
   - C:\temp
 
-- name: download the Ansible ConfigureRemotingForAnsible.ps1 script
-  win_get_url:
-    url: https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1
-    dest: C:\temp\ConfigureRemotingForAnsible.ps1
+- name: copy across the WinRM setup script
+  win_copy:
+    src: setup_winrm.ps1
+    dest: C:\temp\setup_winrm.ps1
 
 - name: template the unattend.xml file
   win_template:
@@ -31,8 +31,6 @@
     actions:
     - path: powershell.exe
       arguments: Remove-Item -Path WSMan:\localhost\Listener\* -Recurse -Force
-    - path: powershell.exe
-      arguments: Remove-Item -Path Cert:\LocalMachine\My\* -Force
     - path: C:\windows\system32\sysprep\sysprep.exe
       arguments: /generalize /oobe /quiet /shutdown /unattend:C:\Windows\Panther\Unattend\unattend.xml
 

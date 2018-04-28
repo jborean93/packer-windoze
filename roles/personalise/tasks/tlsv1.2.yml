@@ -39,7 +39,8 @@
     data: '{{item.value}}'
     type: dword
     state: present
-  when: man_host_type == '2008r2' # remove when Server 2008 KB does not break WinRM over HTTPS
+  register: pri_personalise_tls_config
+  when: not (man_is_longhorn and item.type == "Server") # Server 2008 Server impl does not work, only apply the client configuration
   loop:
   - type: Server
     property: Enabled
@@ -53,3 +54,7 @@
   - type: Client
     property: DisabledByDefault
     value: 0
+
+- name: reboot if TLS config was applied
+  win_reboot:
+  when: pri_personalise_tls_config is changed

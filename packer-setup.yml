@@ -15,5 +15,9 @@
       - ansible_version.minor >= 5
       msg: packer-windoze requires Ansible 2.5 or newer to run, please upgrade or checkout devel before running
 
+  - name: check that pywinrm is installed
+    command: python -c "import winrm"
+    changed_when: False
+
   roles:
   - packer-setup

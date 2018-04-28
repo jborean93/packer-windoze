@@ -27,8 +27,6 @@ To use the scripts in this repo you will need the following;
 * [VirtualBox](https://www.virtualbox.org/wiki/Downloads) >= 5.1.12
 * [Ansible](https://github.com/ansible/ansible) >= 2.5 or devel
 
-_Note: as of writting this Ansible 2.5 has not been officially released, please checkout from source on the devel branch_
-
 When setting `man_packer_setup_host_type: 2008-x64`, Ansible will extract the
 evaluation ISO from a self extracting archive. This requires the `unrar`
 package to be installed. If you don't want to install this package, manually
@@ -99,7 +97,7 @@ variables;
 
 * `opt_packer_setup_access_token`: The acces token for the Vagrant Cloud API, this is set to the `access_token` key in the packer build file.
 * `opt_packer_setup_box_tag`: The shorthand tag for the map that maps to Vagrant Cloud, this is set to the `box_tag` key in the packer build file.
-* `opt_packer_setup_version`: The version number for the box which is validated based on semantic versioning, this is set to the `version` key in the packer build file.
+* `opt_packer_setup_version`: The version number for the box which is validated based on semantic versioning, this is set to the `version` key in the packer build file and if ommitted then the latest version in the changelog is used.
 
 ### Create Images with Packer
 

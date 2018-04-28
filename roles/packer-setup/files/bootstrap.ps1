@@ -141,7 +141,7 @@ switch($action) {
         Write-Log -message "install Internet Explorer 9"
         $architecture = $env:PROCESSOR_ARCHITECTURE
         if ($architecture -eq "AMD64") {
-            $url = "http://download.windowsupdate.com/msdownload/update/software/uprl/2011/03/wu-ie9-windowsvista-x64_f599c02e7e1ea8a4e1029f0e49418a8be8416367.exe"
+            $url = "https://download.microsoft.com/download/7/C/3/7C3BA535-1D8C-4A87-9F1D-163BBA971CA9/IE9-WIndowsVista-x64-enu.exe"
         } else {
             $url = "http://download.windowsupdate.com/msdownload/update/software/updt/2011/03/wu-ie9-windowsvista-x86_a2b66ff9e9affda9675dd85ba2b637a882979a25.exe"
         }
@@ -217,22 +217,22 @@ switch($action) {
 
         switch($host_string) {
             "6.0-x86" {
-                $hotfix_url = "http://hotfixv4.microsoft.com/Windows%20Vista/sp3/Fix467401/6000/free/464091_intl_i386_zip.exe"
+                $hotfix_url = "https://hotfixv4.trafficmanager.net/Windows%20Vista/sp3/Fix467401/6000/free/464091_intl_i386_zip.exe"
             }
             "6.0-AMD64" {
-                $hotfix_url = "http://hotfixv4.microsoft.com/Windows%20Vista/sp3/Fix467401/6000/free/464090_intl_x64_zip.exe"
+                $hotfix_url = "https://hotfixv4.trafficmanager.net/Windows%20Vista/sp3/Fix467401/6000/free/464090_intl_x64_zip.exe"
             }
             "6.1-x86" {
-                $hotfix_url = "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix467402/7600/free/463983_intl_i386_zip.exe"
+                $hotfix_url = "https://hotfixv4.trafficmanager.net/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix467402/7600/free/463983_intl_i386_zip.exe"
             }
             "6.1-AMD64" {
-                $hotfix_url = "http://hotfixv4.microsoft.com/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix467402/7600/free/463984_intl_x64_zip.exe"
+                $hotfix_url = "https://hotfixv4.trafficmanager.net/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix467402/7600/free/463984_intl_x64_zip.exe"
             }
             "6.2-x86" {
-                $hotfix_url = "http://hotfixv4.microsoft.com/Windows%208%20RTM/nosp/Fix452763/9200/free/463940_intl_i386_zip.exe"
+                $hotfix_url = "https://hotfixv4.trafficmanager.net/Windows%208%20RTM/nosp/Fix452763/9200/free/463940_intl_i386_zip.exe"
             }
             "6.2-AMD64" {
-                $hotfix_url = "http://hotfixv4.microsoft.com/Windows%208%20RTM/nosp/Fix452763/9200/free/463941_intl_x64_zip.exe"
+                $hotfix_url = "https://hotfixv4.trafficmanager.net/Windows%208%20RTM/nosp/Fix452763/9200/free/463941_intl_x64_zip.exe"
             }
             default {
                 $error_message = "unknown host string $host_string, cannot download Hotfix"
@@ -309,16 +309,10 @@ switch($action) {
         Reboot-AndResume -action "winrm-listener"
     }
     "winrm-listener" {
-        Write-Log -message "downloading WinRM config script and enabling the protocol"
-        $url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
-        $file = "$tmp_dir\ConfigureRemotingForAnsible.ps1"
-        Download-File -url $url -path $file
-        $exit_code = Run-Process -executable "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -arguments "-File $file"
-        if ($exit_code -ne 0) {
-            $error_message = "failed to configure WinRM endpoint required by Ansible"
-            Write-Log -message $error_message -level "ERROR"
-            throw $error_message
-        }
+        Write-Log -message "configuring WinRM listener to work over 5985 with Basic auth"
+        &winrm.cmd quickconfig -q
+        Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+        Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $true
         $winrm_service = Get-Service -Name winrm
         if ($winrm_service.Status -ne "Running") {
             try {
