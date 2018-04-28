@@ -23,9 +23,10 @@ together more.
 
 To use the scripts in this repo you will need the following;
 
+* [pywinrm](https://pypi.org/project/pywinrm)
 * [Packer](https://www.packer.io/docs/install/index.html) >= 1.0.0
 * [VirtualBox](https://www.virtualbox.org/wiki/Downloads) >= 5.1.12
-* [Ansible](https://github.com/ansible/ansible) >= 2.5 or devel
+* [Ansible](https://github.com/ansible/ansible) >= 2.5.1
 
 When setting `man_packer_setup_host_type: 2008-x64`, Ansible will extract the
 evaluation ISO from a self extracting archive. This requires the `unrar`
