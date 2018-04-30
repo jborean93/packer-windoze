@@ -1,0 +1,42 @@
+- name: get the root drive where the VirtualBox additions are located
+  win_shell: (Get-PSDrive | Where-Object { Test-Path -Path "$($_.Name):\VBoxWindowsAdditions.exe" }).Name
+  register: pri_personalise_vbox_guest_root_res
+  changed_when: no
+
+- name: get rid of module output cruft
+  set_fact:
+    pri_personalise_vbox_guest_root: '{{pri_personalise_vbox_guest_root_res.stdout_lines[0]}}'
+
+- name: install the VirtualBox certificates required by the install process
+  win_shell: |
+    Get-ChildItem {{pri_personalise_vbox_guest_root}}:\cert\ -Filter vbox*.cer | ForEach-Object {
+        {{pri_personalise_vbox_guest_root}}:\cert\VBoxCertUtil.exe add-trusted-publisher $_.FullName --root $_.FullName
+    }
+
+- name: install VirtualBox Guest Additions
+  win_command: '{{pri_personalise_vbox_guest_root}}:\VBoxWindowsAdditions.exe /force /with_autologon /with_d3d /with_wddm /S'
+  args:
+    creates: C:\Program Files\Oracle\VirtualBox Guest Additions
+  ignore_errors: yes
+  register: pri_personalise_vbox_guest_install
+
+- name: attempt to recover from failed install (Server 2008 needs to add 1 more cert to the trusted store)
+  block:
+  - name: install VBoxGuest.cat signer certificate
+    win_shell: |
+      $cert_file = "C:\Program Files\Oracle\VirtualBox Guest Additions\VBoxGuest.cat"
+      $cert = (Get-AuthenticodeSignature -FilePath $cert_file).SignerCertificate
+
+      $store_name = [System.Security.Cryptography.X509Certificates.StoreName]::TrustedPublisher
+      $store_location = [System.Security.Cryptography.X509Certificates.StoreLocation]::LocalMachine
+      $cert_store = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store($store_name, $store_location)
+      $cert_store.Open("MaxAllowed")
+      $cert_store.Add($cert)
+      $cert_store.Close()
+
+  - name: add the VBoxGuest driver now it is trusted
+    win_command: pnputil.exe -a "C:\Program Files\Oracle\VirtualBox Guest Additions\VBoxGuest.inf"
+
+  - name: install VirtualBox Guest Additions again
+    win_command: '{{pri_personalise_vbox_guest_root}}:\VBoxWindowsAdditions.exe /force /with_autologon /with_d3d /with_wddm /S'
+  when: pri_personalise_vbox_guest_install.rc != 0

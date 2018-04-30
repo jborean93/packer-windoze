@@ -26,13 +26,44 @@ To use the scripts in this repo you will need the following;
 * [pywinrm](https://pypi.org/project/pywinrm)
 * [Packer](https://www.packer.io/docs/install/index.html) >= 1.0.0
 * [VirtualBox](https://www.virtualbox.org/wiki/Downloads) >= 5.1.12
+* [Hyper-V](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-on-windows-server) - Server 2008 is not supported with Hyper-V
 * [Ansible](https://github.com/ansible/ansible) >= 2.5.1
+* `mkisofs` needs to be installed and available in the same environment that Ansible is run from
 
 When setting `man_packer_setup_host_type: 2008-x64`, Ansible will extract the
 evaluation ISO from a self extracting archive. This requires the `unrar`
 package to be installed. If you don't want to install this package, manually
 extract the ISO on another box and specify the path under
 `opt_packer_setup_iso_path`.
+
+To install `mkisofs` and `unrar`, you can run one of the commands below
+depending on your distribution;
+
+```bash
+# for Debian/Ubuntu
+sudo apt-get install mkisofs unrar
+
+# for RHEL/CentOS
+sudo yum install mkisofs
+
+sudo yum localinstall --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
+sudo yum install unrar
+
+# for Fedora
+sudo dnf install mkisofs
+
+sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+sudo dnf install unrar
+
+# for MacOS (requires Homebrew)
+brew install cdrtools unrar
+```
+
+Currently Hyper-V will create an External network switch called
+`packer-windoze` during the `packer-setup.yml` playbook. This switch is
+required as it allows the Guest VM internet access as well as connectivity
+between the host and the guest. This is not cleaned up automatically after
+the run is complete and must be done manually.
 
 ## How to Run
 
@@ -46,7 +77,7 @@ To create an image, the process is split up into 2 phases
 For Packer to provision a Windows host it first needs an `Autounattend.xml`
 file and bootstrapping script to configure the base host requirements needed by
 Ansible. Instead of having them already stored in the repo, they are
-dynamically created by Ansible.
+dynamically created by Ansible based on the configuration provided.
 
 To create the files for a particular host type run;
 
@@ -61,10 +92,12 @@ After running the playbook, a folder named based on the value set for
 `man_packer_setup_host_type` will be created and it will contain the following
 files;
 
-* `Autounattend.xml`: The answer file used by Windows during the initial install
-* `bootstrap.ps1`: A PowerShell script that is run after the initial install to configure the host required by Ansible
+* `iso/Autounattend.xml`: The answer file used by Windows during the initial install
+* `iso/bootstrap.ps1`: A PowerShell script that is run after the initial install to configure the host required by Ansible
 * `hosts.ini`: An Ansible inventory file containing the info required by Ansible during the provisioning phase
 * `packer.json`: The Packer definition file the contains all the info that Packer needs to build the image
+* `secondary.iso`: The secondary ISO file used to store the `Autounattend.xml`, `bootstrap.ps1`, and other files used in that process
+* `get-vm-ip.ps1`: Used by the Hyper-V builder to get the VM's IP Address and configure the Ansible inventory with that value
 
 #### Mandatory Variables
 
@@ -87,6 +120,7 @@ You can set the host type to the following values
 The following are optional parameters set using the `-e` argument and can
 change the way Packer builds the images in the next step;
 
+* `opt_packer_setup_builder`: The Packer builder to use, defaults to `virtualbox` but can be `hyperv` when running on Windows.
 * `opt_packer_setup_iso_path`: The local path to the install Windows ISO, this means packer will use this instead of downloading the pre-set evaluation ISO from the internet.
 * `opt_packer_setup_iso_wim_label`: The WIM image name to use when installing Windows from an ISO, the process defaults to the Standard edition if not set.
 * `opt_packer_setup_username`: (Default: `vagrant`) The name of the user to create in the provisioning process, this is the only user that will available in the image created as the builtin Administrator account is disabled.

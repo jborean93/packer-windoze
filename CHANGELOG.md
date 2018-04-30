@@ -11,6 +11,7 @@ contains a list of changes that each incorporate.
 * Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
 * Set the builtin `vagrant` account password to never expire
 * Stop using the Ansible ConfigureRemotingForAnsible.ps1 script, swap over to custom script to support SHA256 and simplify steps
+* Added Hyper-V builder support by specifying `-e opt_packer_setup_builder=hyperv` - This will only run on a Windows with WSL host and doesn't work for Server 2008
 * 2008-x64
     * Enabled TLSv1.2 client support, server is still disabled by default
 * 2008-x86

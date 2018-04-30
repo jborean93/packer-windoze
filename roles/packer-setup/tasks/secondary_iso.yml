@@ -1,0 +1,30 @@
+# Used to create the secondary ISO that contains the boostrapping script
+# and files used in the bootstrapping process
+---
+- name: create iso download folder
+  file:
+    path: '{{man_packer_setup_host_type}}/iso'
+    state: directory
+
+# need to set pri_packer_setup_bootstrap_drive
+- name: template the required files
+  template:
+    dest: '{{man_packer_setup_host_type}}/iso/{{item}}'
+    src: '{{item}}.j2'
+  vars:
+    pri_packer_setup_bootstrap_drive: '{{(opt_packer_setup_builder == "virtualbox")|ternary("f", "e")}}'
+  register: pri_packer_setup_template_res
+  with_items:
+  - bootstrap.ps1
+  - Autounattend.xml
+
+- name: download the required bootstrapping files
+  get_url:
+    dest: '{{man_packer_setup_host_type}}/iso/{{item.file|default()}}'
+    url: '{{item.url}}'
+  register: pri_packer_setup_bootstrap_download_res
+  with_items: '{{pri_packer_setup_config.bootstrap_files}}'
+
+- name: create the secondary ISO file
+  command: mkisofs -joliet-long -lU -o {{man_packer_setup_host_type}}/secondary.iso {{man_packer_setup_host_type}}/iso
+  when: pri_packer_setup_template_res is changed or pri_packer_setup_bootstrap_download_res is changed
