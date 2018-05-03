@@ -126,6 +126,7 @@ change the way Packer builds the images in the next step;
 * `opt_packer_setup_username`: (Default: `vagrant`) The name of the user to create in the provisioning process, this is the only user that will available in the image created as the builtin Administrator account is disabled.
 * `opt_packer_setup_password`: (Default: `vagrant`) The password for `opt_packer_setup_username`, this password is also set for the builtin Administrator account even though it is disabled in the image.
 * `opt_packer_setup_product_key`: The product key to use when installing Windows, do not set this unless you know what you are doing.
+* `opt_packer_setup_hyperv_switch`: (Default: `packer-windoze`) The name of the Hyper-V switch that will be created in the setup.
 
 To add a post-processor to upload to Vagrant Cloud, add in the following 3
 variables;

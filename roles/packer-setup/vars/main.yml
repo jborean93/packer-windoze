@@ -120,7 +120,7 @@ pri_packer_setup_builders_info:
     ram_size: 2048
     secondary_iso_images: 
     - '{{man_packer_setup_host_type}}/secondary.iso'
-    switch_name: packer-windoze
+    switch_name: '{{opt_packer_setup_hyperv_switch|default("packer-windoze")}}'
 
 pri_packer_setup_provisioners_info:
   common: []

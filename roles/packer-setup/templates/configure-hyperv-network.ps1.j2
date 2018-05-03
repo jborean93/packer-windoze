@@ -30,7 +30,7 @@ Function Get-VMIPAddress($vm_name) {
     return $ip
 }
 
-$inventory_file = '{{man_packer_setup_host_type}}\hosts.ini'
+$inventory_file = "$PSScriptRoot\hosts.ini"
 $vm_name = '{{pri_packer_setup_builders.vm_name}}'
 
 Write-Host "Attempting to get IP Address of VM: $vm_name"
