@@ -32,12 +32,7 @@ Function Get-VMIPAddress($vm_name) {
 
 $inventory_file = "$PSScriptRoot\hosts.ini"
 $vm_name = '{{pri_packer_setup_builders.vm_name}}'
-
-Write-Host "Attempting to get IP Address of VM: $vm_name"
 $ip_address = Get-VMIPAddress -vm_name $vm_name
-Write-Host "Found IP Address of VM: $ip_address"
-
-Write-Host "Configuring Ansible inventory file to use VM IP"
 $contents = Get-Content -Path $inventory_file
 $contents = $contents -replace "ansible_host=.*$", "ansible_host=$ip_address"
 Set-Content -Path $inventory_file -Value $contents
