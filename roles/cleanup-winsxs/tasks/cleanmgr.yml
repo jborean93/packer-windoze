@@ -44,26 +44,6 @@
     remote_src: True
   when: man_host_type == "2008r2"
 
-# Cannot use win_hotfix as DISM cmdlets are not available with Server 2008 R2
-- name: check if Server 2008 R2 hotfix for Windows update cleanup is installed
-  win_shell: if (Get-Hotfix -Id KB2852386 -ErrorAction SilentlyContinue) { $true } else { $false }
-  register: pri_cleanup_winsxs_dism_hotfix_check
-  when: man_host_type == "2008r2"
-
-- block:
-  - name: download hotfix to enable Windows update cleanup
-    win_get_url:
-      url: https://download.microsoft.com/download/2/A/3/2A3FD850-E45F-47D4-AFF8-8048333CBA7D/Windows6.1-KB2852386-v2-x64.msu
-      dest: C:\temp\Windows6.1-KB2852386-v2-x64.msu
-
-  - name: install hotfix to enable Windows Update cleanup on Server 2008 R2
-    win_command: C:\Windows\System32\wusa.exe C:\temp\Windows6.1-KB2852386-v2-x64.msu /quiet /norestart
-    become: yes
-
-  - name: reboot server after installing hotfix
-    win_reboot:
-  when: pri_cleanup_winsxs_dism_hotfix_check.stdout_lines is defined and pri_cleanup_winsxs_dism_hotfix_check.stdout_lines[0] == "False"
-
 - name: copy cleanmgr from winsxs Server 2012
   win_copy:
     src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.2.9200.16384_none_c60dddc5e750072a\cleanmgr.exe

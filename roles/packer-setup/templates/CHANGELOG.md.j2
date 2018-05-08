@@ -7,15 +7,15 @@ This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
 {% for version_entry in pri_packer_setup_changelog %}
-### {{version_entry.version}} - {{version_entry.date}}
+### v{{version_entry.version}} - {{version_entry.date|default("TBD")}}
 
 {% for change in version_entry.changes %}
 * {{change}}
 {% endfor %}
 {% if version_entry.host_specific_changes is defined %}
-{% for host_type, host_changes in version_entry.host_specific_changes.items() %}
+{% for host_type in version_entry.host_specific_changes.keys() %}
 * {{host_type}}
-{% for change in host_changes %}
+{% for change in version_entry.host_specific_changes[host_type] %}
     * {{change}}
 {% endfor %}
 {% endfor %}

@@ -42,3 +42,7 @@
   become: yes
   register: pri_update_result
   when: pri_update_count.found_update_count is defined and pri_update_count.found_update_count > 0
+
+- name: reboot to handle intermittent update failure
+  win_reboot:
+  when: pri_update_result is failed

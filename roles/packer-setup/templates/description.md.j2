@@ -36,7 +36,7 @@ Other configurations from the standard image;
 ### Changes
 
 {% for version_entry in pri_packer_setup_changelog %}
-#### {{version_entry.version}} - {{version_entry.date}}
+#### v{{version_entry.version}} - {{version_entry.date|default(lookup('pipe', 'date +%Y-%m-%d'))}}
 
 {% for change in version_entry.changes %}
 * {{change}}

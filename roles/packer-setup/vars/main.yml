@@ -1,7 +1,6 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
-- version: v0.0.3
-  date: TBD
+- version: '0.3.0'
   changes:
   - Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
   - Set the builtin `vagrant` account password to never expire
@@ -12,7 +11,7 @@ pri_packer_setup_changelog:
     - Enabled TLSv1.2 client support, server is still disabled by default
     2008-x86:
     - Enabled TLSv1.2 client support, server is still disabled by default
-- version: v0.0.2
+- version: '0.2.0'
   date: 2017-12-01
   changes:
   - Create a custom Vagrantfile template for the final image that includes the username and other required settings
@@ -37,7 +36,7 @@ pri_packer_setup_changelog:
     2008-x86:
     - Disabled screensaver to stop auto logoff by default
     - Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
-- version: v0.0.1
+- version: '0.0.1'
   date: 2017-10-29
   changes:
   - First images built by this process
@@ -52,6 +51,7 @@ pri_packer_setup_builders_info:
     winrm_username: '{{opt_packer_setup_username}}'
     winrm_password: '{{opt_packer_setup_password}}'
     winrm_port: '5985'
+    winrm_timeout: '60m'
     shutdown_command: schtasks.exe /Run /TN "packer-shutdown"
     shutdown_timeout: 15m
   virtualbox:
@@ -272,6 +272,10 @@ pri_packer_setup_host_config:
       url: https://hotfixv4.trafficmanager.net/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix467402/7600/free/463984_intl_x64_zip.exe
     - name: Latest Windows Update Version
       url: http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x64.exe
+    - name: Servicing Stack Update
+      url: https://download.microsoft.com/download/F/D/3/FD3728D5-0D2F-44A6-B7DA-1215CC0C9B75/Windows6.1-KB3020369-x64.msu
+    - name: Update Rollup
+      url: http://download.windowsupdate.com/d/msdownload/update/software/updt/2016/05/windows6.1-kb3125574-v4-x64_2dafb1d203c8964239af3048b5dd4b1264cd93b9.msu
   '2012':
     box_tag: jborean93/WindowsServer2012
 
