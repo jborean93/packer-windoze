@@ -1,15 +1,16 @@
 [windows]
-127.0.0.1
+packer-host  ansible_host=127.0.0.1
 
 [windows:vars]
 ansible_user={{opt_packer_setup_username}}
 ansible_password={{opt_packer_setup_password}}
-ansible_port={{pri_packer_setup_config.forwarded_port}}
+ansible_port={{pri_packer_setup_ansible_port}}
 ansible_connection=winrm
 ansible_winrm_scheme=http
 ansible_become_method=runas
 ansible_become_user=SYSTEM
 
+man_provider={{opt_packer_setup_builder}}
 man_host_type="{{man_packer_setup_host_type}}"
 man_host_architecture={{pri_packer_setup_config.architecture}}
 man_is_longhorn={{pri_packer_setup_config.answer_longhorn}}

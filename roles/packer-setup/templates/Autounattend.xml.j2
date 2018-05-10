@@ -42,6 +42,54 @@
                             <PartitionID>1</PartitionID>
                         </ModifyPartition>
                     </ModifyPartitions>
+{% elif opt_packer_setup_builder == 'hyperv' and pri_packer_setup_config.hv_generation == 2 %}
+                    <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                            <Order>1</Order>
+                            <Size>300</Size>
+							<Type>Primary</Type>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>2</Order>
+                            <Size>100</Size>
+                            <Type>EFI</Type>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>3</Order>
+                            <Size>128</Size>
+                            <Type>MSR</Type>
+                        </CreatePartition>
+                        <CreatePartition wcm:action="add">
+                            <Order>4</Order>
+                            <Extend>true</Extend>
+							<Type>Primary</Type>
+                        </CreatePartition>
+                    </CreatePartitions>
+                    <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                            <Format>NTFS</Format>
+                            <Label>WINRE</Label>
+                            <Order>1</Order>
+							<PartitionID>1</PartitionID>
+                            <TypeID>de94bba4-06d1-4d40-a16a-bfd50179d6ac</TypeID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Format>FAT32</Format>
+                            <Label>System</Label>
+                            <Order>2</Order>
+                            <PartitionID>2</PartitionID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Order>3</Order>
+                            <PartitionID>3</PartitionID>
+                        </ModifyPartition>
+                        <ModifyPartition wcm:action="add">
+                            <Format>NTFS</Format>
+                            <Label>Windows {{man_packer_setup_host_type}}</Label>
+                            <Order>4</Order>
+                            <PartitionID>4</PartitionID>
+                        </ModifyPartition>
+                    </ModifyPartitions>
 {% else %}
                     <CreatePartitions>
                         <CreatePartition wcm:action="add">
@@ -88,6 +136,8 @@
                         <DiskID>0</DiskID>
 {% if pri_packer_setup_config.answer_longhorn == True %}
                         <PartitionID>1</PartitionID>
+{% elif opt_packer_setup_builder == 'hyperv' and pri_packer_setup_config.hv_generation == 2 %}
+                        <PartitionID>4</PartitionID>
 {% else %}
                         <PartitionID>2</PartitionID>
 {% endif %}
@@ -182,7 +232,7 @@
                     <Order>1</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe a:\bootstrap.ps1 {{pri_packer_setup_config.bootstrap_start}}</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe {{pri_packer_setup_bootstrap_drive}}:\bootstrap.ps1</CommandLine>
                     <Order>2</Order>
                 </SynchronousCommand>
 {% else %}
@@ -191,7 +241,7 @@
                     <Order>1</Order>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File a:\bootstrap.ps1 {{pri_packer_setup_config.bootstrap_start}}</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File {{pri_packer_setup_bootstrap_drive}}:\bootstrap.ps1</CommandLine>
                     <Order>2</Order>
                 </SynchronousCommand>
 {% endif %}

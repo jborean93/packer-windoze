@@ -1,17 +1,18 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
-- version: v0.0.3
-  date: TBD
+- version: '0.3.0'
+  date: 2018-05-10
   changes:
   - Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
   - Set the builtin `vagrant` account password to never expire
   - Stop using the Ansible ConfigureRemotingForAnsible.ps1 script, swap over to custom script to support SHA256 and simplify steps
+  - Added Hyper-V builder support by specifying `-e opt_packer_setup_builder=hyperv` - This will only run on a Windows with WSL host and doesn't work for Server 2008
   host_specific_changes:
     2008-x64:
     - Enabled TLSv1.2 client support, server is still disabled by default
     2008-x86:
     - Enabled TLSv1.2 client support, server is still disabled by default
-- version: v0.0.2
+- version: '0.2.0'
   date: 2017-12-01
   changes:
   - Create a custom Vagrantfile template for the final image that includes the username and other required settings
@@ -36,60 +37,155 @@ pri_packer_setup_changelog:
     2008-x86:
     - Disabled screensaver to stop auto logoff by default
     - Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
-- version: v0.0.1
+- version: '0.0.1'
   date: 2017-10-29
   changes:
   - First images built by this process
 
-# this is a yaml definiton of the JSON packer file
-pri_packer_setup_json:
-  builders:
-  - type: virtualbox-iso
-    vboxmanage:
-    - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--memory", "2048" ]
-    - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--vram", "48" ]
-    - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--cpus", "2" ]
-    - [ "modifyvm", "{{'{{'}}.Name{{'}}'}}", "--natpf1", "winrm,tcp,127.0.0.1,{{pri_packer_setup_config.forwarded_port}},,5985" ]
-    guest_additions_mode: "attach"
-    guest_os_type: '{{pri_packer_setup_config.guest_os_type}}'
-    headless: '{{opt_packer_setup_headless}}'
+pri_packer_setup_builders_info:
+  common:
     iso_url: '{{pri_packer_setup_config.iso_url}}'
     iso_checksum: '{{pri_packer_setup_config.iso_checksum}}'
     iso_checksum_type: md5
+    guest_additions_mode: '{{(opt_packer_setup_builder == "virtualbox")|ternary("attach", "disable")}}'
     communicator: winrm
     winrm_username: '{{opt_packer_setup_username}}'
     winrm_password: '{{opt_packer_setup_password}}'
     winrm_port: '5985'
+    winrm_timeout: '60m'
     shutdown_command: schtasks.exe /Run /TN "packer-shutdown"
     shutdown_timeout: 15m
-    floppy_files:
-    - '{{man_packer_setup_host_type}}/Autounattend.xml'
-    - '{{man_packer_setup_host_type}}/bootstrap.ps1'
+  virtualbox:
+    type: virtualbox-iso
+    vboxmanage:
+    -
+      - modifyvm
+      # need to double escape the Jinja2 {{.Name}} value so Ansible doesn't see it as a variable
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --memory
+      - "2048"
+    -
+      - modifyvm
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --vram
+      - "48"
+    -
+      - modifyvm
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --cpus
+      - "2"
+    -
+      - modifyvm
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --natpf1
+      - winrm,tcp,127.0.0.1,{{pri_packer_setup_config.vb_forwarded_port}},,5985
+    -
+      - storagectl
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --name
+      - Sata Controller
+      - --add
+      - sata
+      - --controller
+      - IntelAHCI
+    -
+      - storageattach
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --storagectl
+      - Sata Controller
+      - --port
+      - "1"
+      - --device
+      - "0"
+      - --type
+      - dvddrive
+      - --medium
+      - '{{man_packer_setup_host_type}}/secondary.iso'
+    vboxmanage_post:
+    -
+      - storagectl
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --name
+      - Sata Controller
+      - --remove
+    guest_os_type: '{{pri_packer_setup_config.vb_guest_os_type}}'
+    headless: '{{opt_packer_setup_headless}}'
+  hyperv:
+    type: hyperv-iso
+    boot_command:
+    - a<enter><wait>a<enter><wait>a<enter><wait>a<enter>
+    boot_wait: 0s
+    cpu: 2
+    generation: '{{pri_packer_setup_config.hv_generation|int}}'
+    ram_size: 2048
+    secondary_iso_images: 
+    - '{{man_packer_setup_host_type}}/secondary.iso'
+    switch_name: '{{opt_packer_setup_hyperv_switch|default("packer-windoze")}}'
 
-  provisioners:
+pri_packer_setup_provisioners_info:
+  common: []
+  virtualbox:
   - type: shell-local
     command: ansible-playbook main.yml -i {{man_packer_setup_host_type}}/hosts.ini -vv
+  hyperv:
+  # get the IP address of the host and store it as a file
+  - type: powershell
+    inline: 
+    - (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter "IPEnabled=True")[0].IPAddress[0] | Set-Content -Path C:\temp\ip.txt
+  # get the file that contains the IP address locally
+  - type: file
+    source: C:\temp\ip.txt
+    destination: '{{man_packer_setup_host_type}}/hyper-v-ip.txt'
+    direction: download
+  # replace the IP in the Ansible inventory with the real IP
+  - type: shell-local
+    command: '{{man_packer_setup_host_type}}\configure-hyperv-network.ps1'
+    execute_command:
+    - powershell.exe
+    - -ExecutionPolicy
+    - ByPass
+    - -File
+    - '{% raw %}{{"{{"}}.Command{{"}}"}}{% endraw %}'
+  - type: shell-local
+    command: ansible-playbook main.yml -i {{man_packer_setup_host_type}}/hosts.ini -vv
+    execute_command:
+    - bash.exe
+    - -ic
+    - '{% raw %}{{"{{"}}.Command{{"}}"}}{% endraw %}'
 
+pri_packer_setup_post_processors_info:
+  common:
+    type: vagrant
+    output: "{{man_packer_setup_host_type}}/{{opt_packer_setup_builder}}.box"
+    vagrantfile_template: "{{man_packer_setup_host_type}}/vagrantfile.template"
+  virtualbox: {}
+  hyperv: {}
+
+pri_packer_setup_json:
+  builders:
+  - '{{pri_packer_setup_builders}}'
+  provisioners: '{{pri_packer_setup_provisioners}}'
   post-processors:
   - '{{pri_packer_setup_post_processors}}'
-
-# we have this as a separate entry as the upload flag modifies this
-pri_packer_setup_post_processors:
-  type: vagrant
-  output: "{{man_packer_setup_host_type}}/virtualbox.box"
-  vagrantfile_template: "{{man_packer_setup_host_type}}/vagrantfile.template"
 
 # host settings like url's, checksums, vbox types, etc
 #   iso_url: The URL of the evaluation ISO
 #   iso_checksum: The md5 checksum of the evaluation ISO
-#   guest_os_type: The virtualbox guest os type used when builing the VM
-#   forwarded_port: The port to set on 127.0.0.1 that will forward to port 5986 on the Windows host, this should be unique
+
+#   VirtualBox specifics for the host
+#   vb_guest_os_type: The VirtualBox guest os type used when builing the VM
+#   vb_forwarded_port: The port to set on 127.0.0.1 that will forward to port 5986 on the Windows host, this should be unique
+
+#   Hyper-V specific for the host
+#   hv_generation: The Hyper-V generation to use for the OS, either 1 or 2
+
+#   Host Information generic to the Ansible setup
 #   iso_wim_label: The WIM Name on the install ISO of the edition to install
-#   bootstrap_start: Where to start on the bootstrap.ps1 script, used as an arg in Autounattend.xml
 #   architecture: The architecture of the build (x86 or amd64) for the answer file
 #   answer_longhorn: Whether the host type will use the older Server 2008 answer file
 #   product_key: The KMS product key required in setup, only used in Server 2008 answer file
 #   box_tag: This is the box tag that I use, this can be overriden with opt_packer_setup_box_tag
+#   bootstrap_files: A list of dictionaries that contains files to download for use in the bootstrapping process, this also modifies the bootstrapping script
 pri_packer_setup_host_config:
   # host pattern <osname-[architecture]-[option]> where architecture and option
   # are optional and will default to x64 and minimal by default
@@ -98,108 +194,182 @@ pri_packer_setup_host_config:
 
     iso_url: https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_x86fre_Server_en-us-KRMSFRE_EN_DVD.iso
     iso_checksum: 89fbc4c7baafc0b0c05f0fa32c192a17
-    guest_os_type: Windows2008
-    forwarded_port: 55981
+    vb_guest_os_type: Windows2008
+    vb_forwarded_port: 55981
+    hv_generation:
 
     iso_wim_label: Windows Longhorn SERVERSTANDARD
-    bootstrap_start: 2008-sp2
     architecture: x86
     answer_longhorn: yes
     product_key: TM24T-X9RMF-VWXK6-X8JC9-BFGM2
+    bootstrap_files:
+    - name: Server 2008 SP2
+      url: https://download.microsoft.com/download/E/7/7/E77CBA41-0B6B-4398-BBBF-EE121EEC0535/Windows6.0-KB948465-X86.exe
+    - name: PowerShell v2
+      url: https://download.microsoft.com/download/F/9/E/F9EF6ACB-2BA8-4845-9C10-85FC4A69B207/Windows6.0-KB968930-x86.msu
+    - name: Internet Explorer 9
+      url: http://download.windowsupdate.com/msdownload/update/software/updt/2011/03/wu-ie9-windowsvista-x86_a2b66ff9e9affda9675dd85ba2b637a882979a25.exe
+    - name: .NET v4.5
+      url: http://download.microsoft.com/download/B/A/4/BA4A7E71-2906-4B2D-A0E1-80CF16844F5F/dotNetFx45_Full_x86_x64.exe
+      arguments: /q /norestart
+    - name: PowerShell v3
+      url: https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.0-KB2506146-x86.msu
+    - name: WMFv3 Memory Hotfix
+      action: install-zip
+      zip_file_pattern: '*KB2842230*.msu'
+      file: KB2842230-wmfv3.zip
+      url: https://hotfixv4.trafficmanager.net/Windows%20Vista/sp3/Fix467401/6000/free/464091_intl_i386_zip.exe
+    - name: Latest Windows Update Version
+      url: http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x86.exe
+    - name: KB4019276 TLSv1.2
+      url: http://download.windowsupdate.com/d/msdownload/update/software/updt/2017/11/windows6.0-kb4019276-x86_c342a7664b8e1afca9e6384c8ed867ab12249512.msu
   '2008-x64':
     box_tag: jborean93/WindowsServer2008-x64
 
     iso_url: https://download.microsoft.com/download/D/D/B/DDB17DC1-A879-44DD-BD11-C0991D292AD7/6001.18000.080118-1840_amd64fre_Server_en-us-KRMSXFRE_EN_DVD.exe
     iso_checksum: 0477c88678efb8ebc5cd7a9e9efd8b82
-    guest_os_type: Windows2008_64
-    forwarded_port: 55982
+    vb_guest_os_type: Windows2008_64
+    vb_forwarded_port: 55982
+    hv_generation:
 
     iso_wim_label: Windows Longhorn SERVERSTANDARD
-    bootstrap_start: 2008-sp2
     architecture: amd64
     answer_longhorn: yes
     product_key: TM24T-X9RMF-VWXK6-X8JC9-BFGM2
+    bootstrap_files:
+    - name: Server 2008 SP2
+      url: https://download.microsoft.com/download/4/7/3/473B909B-7B52-49FE-A443-2E2985D3DFC3/Windows6.0-KB948465-X64.exe
+    - name: PowerShell v2
+      url: https://download.microsoft.com/download/2/8/6/28686477-3242-4E96-9009-30B16BED89AF/Windows6.0-KB968930-x64.msu
+    - name: Internet Explorer 9
+      url: https://download.microsoft.com/download/7/C/3/7C3BA535-1D8C-4A87-9F1D-163BBA971CA9/IE9-WIndowsVista-x64-enu.exe
+    - name: .NET v4.5
+      url: http://download.microsoft.com/download/B/A/4/BA4A7E71-2906-4B2D-A0E1-80CF16844F5F/dotNetFx45_Full_x86_x64.exe
+      arguments: /q /norestart
+    - name: PowerShell v3
+      url: https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.0-KB2506146-x64.msu
+    - name: WMFv3 Memory Hotfix
+      action: install-zip
+      zip_file_pattern: '*KB2842230*.msu'
+      file: KB2842230-wmfv3.zip
+      url: https://hotfixv4.trafficmanager.net/Windows%20Vista/sp3/Fix467401/6000/free/464090_intl_x64_zip.exe
+    - name: Latest Windows Update Version
+      url: http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x64.exe
+    - name: KB4019276 TLSv1.2
+      url: http://download.windowsupdate.com/d/msdownload/update/software/updt/2017/11/windows6.0-kb4019276-x64_014037c8c591841a3b938ffe16197b59c8ce3416.msu
   '2008r2':
     box_tag: jborean93/WindowsServer2008R2
 
     iso_url: https://download.microsoft.com/download/7/5/E/75EC4E54-5B02-42D6-8879-D8D3A25FBEF7/7601.17514.101119-1850_x64fre_server_eval_en-us-GRMSXEVAL_EN_DVD.iso
     iso_checksum: 4263be2cf3c59177c45085c0a7bc6ca5
-    guest_os_type: Windows2008_64
-    forwarded_port: 55983
+    vb_guest_os_type: Windows2008_64
+    vb_forwarded_port: 55983
+    hv_generation: 1
 
     iso_wim_label: Windows Server 2008 R2 SERVERSTANDARD
-    bootstrap_start: dotnet
     architecture: amd64
     answer_longhorn: no
+    bootstrap_files:
+    - name: .NET v4.5
+      url: http://download.microsoft.com/download/B/A/4/BA4A7E71-2906-4B2D-A0E1-80CF16844F5F/dotNetFx45_Full_x86_x64.exe
+      arguments: /q /norestart
+    - name: PowerShell v3
+      url: https://download.microsoft.com/download/E/7/6/E76850B8-DA6E-4FF5-8CCE-A24FC513FD16/Windows6.1-KB2506143-x64.msu
+    - name: WMFv3 Memory Hotfix
+      action: install-zip
+      zip_file_pattern: '*KB2842230*.msu'
+      file: KB2842230-wmfv3.zip
+      url: https://hotfixv4.trafficmanager.net/Windows%207/Windows%20Server2008%20R2%20SP1/sp2/Fix467402/7600/free/463984_intl_x64_zip.exe
+    - name: Latest Windows Update Version
+      url: http://download.windowsupdate.com/windowsupdate/redist/standalone/7.6.7600.320/windowsupdateagent-7.6-x64.exe
+    - name: Servicing Stack Update
+      url: https://download.microsoft.com/download/F/D/3/FD3728D5-0D2F-44A6-B7DA-1215CC0C9B75/Windows6.1-KB3020369-x64.msu
+    - name: Update Rollup
+      url: http://download.windowsupdate.com/d/msdownload/update/software/updt/2016/05/windows6.1-kb3125574-v4-x64_2dafb1d203c8964239af3048b5dd4b1264cd93b9.msu
   '2012':
     box_tag: jborean93/WindowsServer2012
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/D/A/6DAB58BA-F939-451D-9101-7DE07DC09C03/9200.16384.WIN8_RTM.120725-1247_X64FRE_SERVER_EVAL_EN-US-HRM_SSS_X64FREE_EN-US_DV5.ISO
     iso_checksum: 8503997171f731d9bd1cb0b0edc31f3d
-    guest_os_type: Windows2012_64
-    forwarded_port: 55984
+    vb_guest_os_type: Windows2012_64
+    vb_forwarded_port: 55984
+    hv_generation: 2
 
     iso_wim_label: Windows Server 2012 SERVERSTANDARD
-    bootstrap_start: tiworker-fix
     architecture: amd64
     answer_longhorn: no
+    bootstrap_files:
+    - name: TiWorker Slow Performance Fix
+      url: https://download.microsoft.com/download/D/D/C/DDC353A0-A56D-48E8-B2C0-97615C503145/Windows8-RT-KB2771431-x64.msu
+    - name: WMFv3 Memory Hotfix
+      action: install-zip
+      zip_file_pattern: '*KB2842230*.msu'
+      file: KB2842230-wmfv3.zip
+      url: https://hotfixv4.trafficmanager.net/Windows%208%20RTM/nosp/Fix452763/9200/free/463941_intl_x64_zip.exe
+    - name: Latest Windows Update Version
+      url: http://download.windowsupdate.com/c/msdownload/update/software/crup/2014/07/windows8-rt-kb2937636-x64_29e0b587c8f09bcf635c1b79d09c00eef33113ec.msu
   '2012r2':
     box_tag: jborean93/WindowsServer2012R2
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO
     iso_checksum: 5b5e08c490ad16b59b1d9fab0def883a
-    guest_os_type: Windows2012_64
-    forwarded_port: 55985
+    vb_guest_os_type: Windows2012_64
+    vb_forwarded_port: 55985
+    hv_generation: 2
 
     iso_wim_label: Windows Server 2012 R2 SERVERSTANDARD
-    bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
+    bootstrap_files: []
   '2016':
     box_tag: jborean93/WindowsServer2016
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/1/4/9/149D5452-9B29-4274-B6B3-5361DBDA30BC/14393.0.161119-1705.RS1_REFRESH_SERVER_EVAL_X64FRE_EN-US.ISO
     iso_checksum: 70721288bbcdfe3239d8f8c0fae55f1f
-    guest_os_type: Windows2016_64
-    forwarded_port: 55986
+    vb_guest_os_type: Windows2016_64
+    vb_forwarded_port: 55986
+    hv_generation: 2
 
     iso_wim_label: Windows Server 2016 SERVERSTANDARD
-    bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
+    bootstrap_files: []
   '1709':
     box_tag: WindowsServer1709
 
     # no evaluation ISO is available, end user must supply the path to a local ISO file
     iso_checksum: 7c73ce30c3975652262f794fc35127b5
-    guest_os_type: Windows2016_64
-    forwarded_port: 55987
+    vb_guest_os_type: Windows2016_64
+    vb_forwarded_port: 55987
+    hv_generation: 2
 
     iso_wim_label: Windows Server 2016 SERVERSTANDARDACORE
-    bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
+    bootstrap_files: []
   '10-x86':
     box_tag: jborean93/Windows10-x86
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x86FRE_en-us.iso
     iso_checksum: f2c39358d7186adae6825096c514edd6
-    guest_os_type: Windows10
-    forwarded_port: 55988
+    vb_guest_os_type: Windows10
+    vb_forwarded_port: 55988
+    hv_generation: 2
 
     iso_wim_label: Windows 10 Enterprise Evaluation
-    bootstrap_start: winrm-listener
     architecture: x86
     answer_longhorn: no
+    bootstrap_files: []
   '10-x64':
     box_tag: jborean93/Windows10-x64
 
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
     iso_checksum: f4f85d77516721d9a19ca866172a5ecb
-    guest_os_type: Windows10_64
-    forwarded_port: 55989
+    vb_guest_os_type: Windows10_64
+    vb_forwarded_port: 55989
+    hv_generation: 2
 
     iso_wim_label: Windows 10 Enterprise Evaluation
-    bootstrap_start: winrm-listener
     architecture: amd64
     answer_longhorn: no
+    bootstrap_files: []

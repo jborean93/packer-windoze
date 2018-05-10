@@ -9,93 +9,71 @@
     msg: man_packer_setup_host_type {{man_packer_setup_host_type}} is not a valid host type, expecting {{pri_packer_setup_host_config.keys()}}
   when: pri_packer_setup_host_config[man_packer_setup_host_type] is not defined
 
-- name: set fact of packer host config based on host_type
-  set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_host_config[man_packer_setup_host_type]}}'
-
-- name: override iso_url with opt_packer_setup_iso_path if defined
-  set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_url", opt_packer_setup_iso_path)}}'
-  when: opt_packer_setup_iso_path is defined
-
-- name: override iso_wim_label with opt_packer_setup_iso_wim_label if defined
-  set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_wim_label", opt_packer_setup_iso_wim_label)}}'
-  when: opt_packer_setup_iso_wim_label is defined
-
-- name: override product_key with opt_packer_setup_product_key if defined
-  set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("product_key", opt_packer_setup_product_key)}}'
-  when: opt_packer_setup_product_key is defined
-
-- name: assert that iso_url is set or overriden with opt_packer_setup_iso_path
-  assert:
-    that:
-    - pri_packer_setup_config.iso_url is defined
-    msg: opt_packer_setup_iso_path must be defined is the URL is not supplied in the default vars
+- name: verify that a non support Hyper-V configuration isn't set
+  fail:
+    msg: man_packer_setup_host_type {{man_packer_setup_host_type}} is not supported with the Hyper-V builder
+  when: opt_packer_setup_builder == 'hyperv' and man_packer_setup_host_type in ["2008-x86", "2008-x64"]
 
 - name: create the packer build folder for the packer files
   file:
     path: '{{man_packer_setup_host_type}}'
     state: directory
 
+- name: setup Packer config and json file
+  include_tasks: packer_config.yml
+
+- name: create the secondary ISO file used in the bootstrapping process
+  include_tasks: secondary_iso.yml
+
 - name: download and extract ISO's that end with .exe
   include_tasks: download_extract_iso.yml
   when: pri_packer_setup_config.iso_url.endswith('.exe') and opt_packer_setup_iso_path is not defined
 
-- name: set opt_packer_setup_box_tag if it isn't defined
-  set_fact:
-    opt_packer_setup_box_tag: '{{pri_packer_setup_config.box_tag}}'
-  when: opt_packer_setup_box_tag is not defined
+- name: create Hyper-V External Network switch
+  block:
+  - name: check if the swtch already exists
+    shell: if (Get-VMSwitch -Name "{{pri_packer_setup_builders.switch_name}}" -ErrorAction SilentlyContinue) { $true } else { $false }
+    args:
+      executable: powershell.exe
+    changed_when: False
+    register: pri_packer_setup_hyper_switch_res
 
-- name: add vagrant-cloud post-processor if upload vars are set
-  set_fact:
-    pri_packer_setup_post_processors:
-    - '{{pri_packer_setup_post_processors}}'
-    - type: vagrant-cloud
-      access_token: '{{opt_packer_setup_access_token}}'
-      box_tag: '{{opt_packer_setup_box_tag}}'
-      version: '{{opt_packer_setup_version|default(pri_packer_setup_changelog[0].version)}}'
-      version_description: "{{lookup('template', 'description.md.tmpl')}}"
-  when:
-  - opt_packer_setup_access_token is defined
-
-- name: create packer.json file based on vars set
-  copy:
-    content: '{{pri_packer_setup_json|to_nice_json}}'
-    dest: '{{man_packer_setup_host_type}}/packer.json'
-
-- name: copy the bootstrap.ps1 file
-  copy:
-    dest: '{{man_packer_setup_host_type}}/bootstrap.ps1'
-    src: bootstrap.ps1
-
-- name: template out the Autounattend.xml file
-  template:
-    dest: '{{man_packer_setup_host_type}}/Autounattend.xml'
-    src: Autounattend.xml.j2
+  - name: create Hyper-V switch
+    shell: $name = (Get-NetAdapter | ?{ $_.Name -like "Ethernet*" })[0].Name; New-VMSwitch -Name "{{pri_packer_setup_builders.switch_name}}" -AllowManagementOS $true -NetAdapterName $name -Notes "Used by packer-windoze"
+    args:
+      executable: powershell.exe
+    when: not pri_packer_setup_hyper_switch_res.stdout_lines[0]|bool
+  when: opt_packer_setup_builder == 'hyperv'
 
 - name: template out the Ansible host file required during provisioning
   template:
     dest: '{{man_packer_setup_host_type}}/hosts.ini'
     src: hosts.ini.j2
+  vars:
+    pri_packer_setup_ansible_port: '{{(opt_packer_setup_builder == "virtualbox")|ternary(pri_packer_setup_config.vb_forwarded_port, 5985)}}'
 
 - name: template out the Vagrantfile template
   template:
     dest: '{{man_packer_setup_host_type}}/vagrantfile.template'
     src: vagrantfile.template.j2
 
-# this isn't strictly used in the process but does test out the description
-# templater
+- name: copy the Hyper-V get IP script
+  copy:
+    dest: '{{man_packer_setup_host_type}}/configure-hyperv-network.ps1'
+    src: configure-hyperv-network.ps1
+  when: opt_packer_setup_builder == 'hyperv'
+
+# this isn't strictly used in the Packer process but does test out the
+# description templater when we don't want to upload the box
 - name: template out the description for the box
   template:
     dest: '{{man_packer_setup_host_type}}/description.md'
-    src: description.md.tmpl
+    src: description.md.j2
 
 - name: generate the main CHANGELOG.md
   template:
     dest: CHANGELOG.md
-    src: CHANGELOG.md.tmpl
+    src: CHANGELOG.md.j2
 
 - name: show user how to run packer build after this completes
   debug:

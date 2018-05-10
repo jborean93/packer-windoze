@@ -9,6 +9,7 @@
       that:
       - ansible_become_method == "runas"
       - ansible_become_user is defined
+      - man_provider is defined
       - man_host_type is defined
       - man_host_architecture is defined
       - man_is_longhorn is defined

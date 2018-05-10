@@ -6,17 +6,18 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
-### v0.0.3 - TBD
+### v0.3.0 - 2018-05-10
 
 * Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
 * Set the builtin `vagrant` account password to never expire
 * Stop using the Ansible ConfigureRemotingForAnsible.ps1 script, swap over to custom script to support SHA256 and simplify steps
+* Added Hyper-V builder support by specifying `-e opt_packer_setup_builder=hyperv` - This will only run on a Windows with WSL host and doesn't work for Server 2008
 * 2008-x64
     * Enabled TLSv1.2 client support, server is still disabled by default
 * 2008-x86
     * Enabled TLSv1.2 client support, server is still disabled by default
 
-### v0.0.2 - 2017-12-01
+### v0.2.0 - 2017-12-01
 
 * Create a custom Vagrantfile template for the final image that includes the username and other required settings
 * Moved sysprep process before the image is created
