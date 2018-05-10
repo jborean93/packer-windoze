@@ -57,10 +57,10 @@
     dest: '{{man_packer_setup_host_type}}/vagrantfile.template'
     src: vagrantfile.template.j2
 
-- name: template out Hyper-V get IP script
-  template:
+- name: copy the Hyper-V get IP script
+  copy:
     dest: '{{man_packer_setup_host_type}}/configure-hyperv-network.ps1'
-    src: configure-hyperv-network.ps1.j2
+    src: configure-hyperv-network.ps1
   when: opt_packer_setup_builder == 'hyperv'
 
 # this isn't strictly used in the Packer process but does test out the

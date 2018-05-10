@@ -1,6 +1,7 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
 - version: '0.3.0'
+  date: 2018-05-10
   changes:
   - Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
   - Set the builtin `vagrant` account password to never expire
@@ -111,7 +112,6 @@ pri_packer_setup_builders_info:
     headless: '{{opt_packer_setup_headless}}'
   hyperv:
     type: hyperv-iso
-    vm_name: packer-windoze-hyperv-{{man_packer_setup_host_type}}
     boot_command:
     - a<enter><wait>a<enter><wait>a<enter><wait>a<enter>
     boot_wait: 0s
@@ -128,8 +128,18 @@ pri_packer_setup_provisioners_info:
   - type: shell-local
     command: ansible-playbook main.yml -i {{man_packer_setup_host_type}}/hosts.ini -vv
   hyperv:
+  # get the IP address of the host and store it as a file
+  - type: powershell
+    inline: 
+    - (Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration -Filter "IPEnabled=True")[0].IPAddress[0] | Set-Content -Path C:\temp\ip.txt
+  # get the file that contains the IP address locally
+  - type: file
+    source: C:\temp\ip.txt
+    destination: '{{man_packer_setup_host_type}}/hyper-v-ip.txt'
+    direction: download
+  # replace the IP in the Ansible inventory with the real IP
   - type: shell-local
-    command: '{{man_packer_setup_host_type}}/configure-hyperv-network.ps1'
+    command: '{{man_packer_setup_host_type}}\configure-hyperv-network.ps1'
     execute_command:
     - powershell.exe
     - -ExecutionPolicy
