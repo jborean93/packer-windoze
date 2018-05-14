@@ -342,6 +342,16 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: no
     skip_feature_removal: yes
+    # to speed the process up, you can manually find the latest KB for the
+    # following updates and put them here. Installing in the bootstrapping
+    # process is a lot faster than through the WUA. Open up
+    # https://www.catalog.update.microsoft.com/home.aspx and search for the
+    # following terms, put the download link below;
+    #
+    #     * Update for Windows Server 2016 for x64-based Systems - Critical Updates
+    #       https://www.catalog.update.microsoft.com/Search.aspx?q=Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Critical%20Updates
+    #     * Cumulative Update for Windows Server 2016 for x64-based Systems - Security Updates
+    #       https://www.catalog.update.microsoft.com/Search.aspx?q=Cumulative%20Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Security%20Updates
     bootstrap_files:
     - name: KB4093137
       url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/03/windows10.0-kb4093137-x64_d4372b516a4e91705f68f5d38c0e1b0abf8072c9.msu
@@ -360,11 +370,7 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: no
     skip_feature_removal: yes
-    bootstrap_files:
-    - name: KB4131372
-      url: http://download.windowsupdate.com/c/msdownload/update/software/crup/2018/05/windows10.0-kb4131372-x64_5559a25ccfdde5a339680220b4d20072b9f9fd4a.msu
-    - name: KB4103727
-      url: http://download.windowsupdate.com/c/msdownload/update/software/secu/2018/05/windows10.0-kb4103727-x64_c217e7d5e2efdf9ff8446871e509e96fdbb8cb99.msu
+    bootstrap_files: []
   '1803':
     box_tag: WindowsServer1803
 

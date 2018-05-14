@@ -10,6 +10,7 @@ contains a list of changes that each incorporate.
 
 * Create a PS Module called `PackerWindoze` that stores the `Reset-WinRMConfig` cmdlet that recreates the WinRM configuration and keep that post sysprep for downstream users to call at any time
 * Added support for the Server 1803 image
+* Install the full sysinternals suite instead of just PsTools, ProcMon, and ProcExp
 * Fixed issue where the WinRM HTTPS firewall rule was not created after sysprep
 * Fixed issue where WinRM still allowed unencrypted data after sysprep
 
