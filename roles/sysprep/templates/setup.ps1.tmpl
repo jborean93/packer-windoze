@@ -52,7 +52,7 @@ switch($action) {
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform" -Name SkipRearm -Value 0
 
         Write-Log -message "Recreate the WinRM listeners"
-        PowerShell.exe -ExecutionPolicy ByPass -File "$tmp_dir\setup_winrm.ps1" -Verbose
+        Reset-WinRMConfig -Verbose
 
         Write-Log -message "Cleaning up C:\temp and logging off"
         Remove-Item -Path C:\temp -Force -Recurse

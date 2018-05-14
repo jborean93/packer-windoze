@@ -105,14 +105,12 @@
   - name: SCRNSAVE.EXE
     state: absent
 
-- name: install procmon, procexp, pstools, and vim
+- name: install sysinternals and vim
   win_chocolatey:
     name: '{{item}}'
     state: present
   loop:
-  - procmon
-  - procexp
-  - pstools
+  - sysinternals
   - vim
 
 - name: install the VirtualBox Guest Additions

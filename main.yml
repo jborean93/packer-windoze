@@ -13,6 +13,8 @@
       - man_host_type is defined
       - man_host_architecture is defined
       - man_is_longhorn is defined
+      - man_packer_windoze_version is defined
+      - man_skip_feature_removal is defined
 
   - name: make sure the WinRM service is set to auto
     win_service:

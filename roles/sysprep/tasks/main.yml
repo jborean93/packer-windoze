@@ -7,10 +7,20 @@
   - C:\Windows\Panther\Unattend
   - C:\temp
 
-- name: copy across the WinRM setup script
+- name: create PackerWindoze PowerShell module folder
+  win_file:
+    path: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\{{man_packer_windoze_version}}
+    state: directory
+
+- name: copy across the PackerWindoze manifest file
   win_copy:
-    src: setup_winrm.ps1
-    dest: C:\temp\setup_winrm.ps1
+    src: PackerWindoze.psm1
+    dest: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\{{man_packer_windoze_version}}\PackerWindoze.psm1
+
+- name: template across the PackerWindoze definition file
+  win_template:
+    src: PackerWindoze.psd1
+    dest: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\{{man_packer_windoze_version}}\PackerWindoze.psd1
 
 - name: template the unattend.xml file
   win_template:

@@ -1,5 +1,6 @@
 # Packer Vagrant Cache
 output-virtualbox-iso/*
+output-hyperv-iso/*
 packer_cache/*
 .vagrant/*
 *.box
@@ -18,6 +19,7 @@ hosts-*
 2012r2/
 2016/
 1709/
+1803/
 10-x86/
 10-x64/
 

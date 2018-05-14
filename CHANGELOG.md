@@ -6,6 +6,13 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v0.4.0 - TBD
+
+* Create a PS Module called `PackerWindoze` that stores the `Reset-WinRMConfig` cmdlet that recreates the WinRM configuration and keep that post sysprep for downstream users to call at any time
+* Added support for the Server 1803 image
+* Fixed issue where the WinRM HTTPS firewall rule was not created after sysprep
+* Fixed issue where WinRM still allowed unencrypted data after sysprep
+
 ### v0.3.0 - 2018-05-10
 
 * Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)

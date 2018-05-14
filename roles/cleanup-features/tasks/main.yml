@@ -9,5 +9,4 @@
   when:
   - pri_cleanup_feature_uninstall_available.rc == 0
   # Features on Demand won't reinstall on Server 2016+ so let's not do it for now
-  - man_host_type != '2016'
-  - man_host_type != '1709'
+  - not man_skip_feature_removal

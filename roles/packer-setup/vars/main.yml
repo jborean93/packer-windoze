@@ -1,5 +1,13 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
+- version: '0.4.0'
+  date: TBD
+  changes:
+  - Create a PS Module called `PackerWindoze` that stores the `Reset-WinRMConfig` cmdlet that recreates the WinRM configuration and keep that post sysprep for downstream users to call at any time
+  - Added support for the Server 1803 image
+  - Install the full sysinternals suite instead of just PsTools, ProcMon, and ProcExp
+  - Fixed issue where the WinRM HTTPS firewall rule was not created after sysprep
+  - Fixed issue where WinRM still allowed unencrypted data after sysprep
 - version: '0.3.0'
   date: 2018-05-10
   changes:
@@ -52,7 +60,7 @@ pri_packer_setup_builders_info:
     winrm_username: '{{opt_packer_setup_username}}'
     winrm_password: '{{opt_packer_setup_password}}'
     winrm_port: '5985'
-    winrm_timeout: '60m'
+    winrm_timeout: '240m'
     shutdown_command: schtasks.exe /Run /TN "packer-shutdown"
     shutdown_timeout: 15m
   virtualbox:
@@ -333,7 +341,12 @@ pri_packer_setup_host_config:
     iso_wim_label: Windows Server 2016 SERVERSTANDARD
     architecture: amd64
     answer_longhorn: no
-    bootstrap_files: []
+    skip_feature_removal: yes
+    bootstrap_files:
+    - name: KB4093137
+      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/03/windows10.0-kb4093137-x64_d4372b516a4e91705f68f5d38c0e1b0abf8072c9.msu
+    - name: KB4103723
+      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2018/05/windows10.0-kb4103723-x64_2adf2ea2d09b3052d241c40ba55e89741121e07e.msu
   '1709':
     box_tag: WindowsServer1709
 
@@ -346,6 +359,25 @@ pri_packer_setup_host_config:
     iso_wim_label: Windows Server 2016 SERVERSTANDARDACORE
     architecture: amd64
     answer_longhorn: no
+    skip_feature_removal: yes
+    bootstrap_files:
+    - name: KB4131372
+      url: http://download.windowsupdate.com/c/msdownload/update/software/crup/2018/05/windows10.0-kb4131372-x64_5559a25ccfdde5a339680220b4d20072b9f9fd4a.msu
+    - name: KB4103727
+      url: http://download.windowsupdate.com/c/msdownload/update/software/secu/2018/05/windows10.0-kb4103727-x64_c217e7d5e2efdf9ff8446871e509e96fdbb8cb99.msu
+  '1803':
+    box_tag: WindowsServer1803
+
+    # no evaluation ISO is available, end user must supply the path to a local ISO file
+    iso_checksum: e34b375e0b9438d72e6305f36b125406
+    vb_guest_os_type: Windows2016_64
+    vb_forwarded_port: 55988
+    hv_generation: 2
+
+    iso_wim_label: Windows Server 2016 SERVERSTANDARDACORE
+    architecture: amd64
+    answer_longhorn: no
+    skip_feature_removal: yes
     bootstrap_files: []
   '10-x86':
     box_tag: jborean93/Windows10-x86
@@ -353,7 +385,7 @@ pri_packer_setup_host_config:
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x86FRE_en-us.iso
     iso_checksum: f2c39358d7186adae6825096c514edd6
     vb_guest_os_type: Windows10
-    vb_forwarded_port: 55988
+    vb_forwarded_port: 55989
     hv_generation: 2
 
     iso_wim_label: Windows 10 Enterprise Evaluation
@@ -366,7 +398,7 @@ pri_packer_setup_host_config:
     iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
     iso_checksum: f4f85d77516721d9a19ca866172a5ecb
     vb_guest_os_type: Windows10_64
-    vb_forwarded_port: 55989
+    vb_forwarded_port: 55990
     hv_generation: 2
 
     iso_wim_label: Windows 10 Enterprise Evaluation
