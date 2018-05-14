@@ -22,6 +22,7 @@
   get_url:
     dest: '{{man_packer_setup_host_type}}/iso/{{item.file|default()}}'
     url: '{{item.url}}'
+    force: no
   register: pri_packer_setup_bootstrap_download_res
   with_items: '{{pri_packer_setup_config.bootstrap_files}}'
 

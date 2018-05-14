@@ -9,18 +9,25 @@
 
 - name: create PackerWindoze PowerShell module folder
   win_file:
-    path: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\{{man_packer_windoze_version}}
+    path: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze
     state: directory
 
 - name: copy across the PackerWindoze manifest file
   win_copy:
     src: PackerWindoze.psm1
-    dest: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\{{man_packer_windoze_version}}\PackerWindoze.psm1
+    dest: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\PackerWindoze.psm1
 
 - name: template across the PackerWindoze definition file
   win_template:
     src: PackerWindoze.psd1
-    dest: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\{{man_packer_windoze_version}}\PackerWindoze.psd1
+    dest: C:\Program Files\WindowsPowerShell\Modules\PackerWindoze\PackerWindoze.psd1
+
+- name: make sure module path is added to PSModulePath
+  win_path:
+    name: PSModulePath
+    scope: machine
+    state: present
+    elements: C:\Program Files\WindowsPowerShell\Modules
 
 - name: template the unattend.xml file
   win_template:
