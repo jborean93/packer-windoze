@@ -1,7 +1,7 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
 - version: '0.4.0'
-  date: TBD
+  date: 2018-05-16
   changes:
   - Create a PS Module called `PackerWindoze` that stores the `Reset-WinRMConfig` cmdlet that recreates the WinRM configuration and keep that post sysprep for downstream users to call at any time
   - Added support for the Server 1803 image
