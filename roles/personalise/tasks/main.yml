@@ -105,6 +105,11 @@
   - name: SCRNSAVE.EXE
     state: absent
 
+- name: disable automatic updates (prevents TrustedInstaller startup thrash on older images)
+  win_regedit:
+    path: HKLM:\Software\Policies\Microsoft\Windows\WindowsUpdate\AU\NoAutoUpdate
+    data: 1
+
 - name: install sysinternals and vim
   win_chocolatey:
     name: '{{item}}'
