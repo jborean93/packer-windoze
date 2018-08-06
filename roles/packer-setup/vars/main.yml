@@ -1,5 +1,8 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
+- version: '0.5.0'
+  changes:
+  - Disabled automatic Windows Update to eliminate post-startup thrash on older images
 - version: '0.4.0'
   date: 2018-05-16
   changes:
