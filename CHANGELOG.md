@@ -6,7 +6,15 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
-### v0.4.0 - 2016-05-16
+### v0.5.0 - 2018-08-08
+
+* Disabled automatic Windows Update to eliminate post-startup thrash on older images - https://github.com/jborean93/packer-windoze/issues/10
+* Updated Win32-OpenSSH to the latest release [v7.7.2.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.7.2.0p1-Beta)
+* Ensure WinRM HTTPS listener and firewall is configured before allowing Vagrant to detect the host is up - https://github.com/jborean93/packer-windoze/issues/11
+* Run ngen before sysprep process to try and speed up the Vagrant init time
+* Clean up `C:\Windows\SoftwareDistribution\Download` and `C:\Recovery` as part of the cleanup process
+
+### v0.4.0 - 2018-05-16
 
 * Create a PS Module called `PackerWindoze` that stores the `Reset-WinRMConfig` cmdlet that recreates the WinRM configuration and keep that post sysprep for downstream users to call at any time
 * Added support for the Server 1803 image

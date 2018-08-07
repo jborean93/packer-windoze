@@ -1,4 +1,7 @@
 ---
+- name: run ngen to recompile .NET assemblies
+  win_dotnet_ngen:
+
 - name: ensure unattend panther and temp directory exists
   win_file:
     path: '{{item}}'

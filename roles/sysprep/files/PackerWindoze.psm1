@@ -64,28 +64,37 @@ Function New-LegacySelfSignedCert($subject, $valid_days) {
     return $parsed_certificate
 }
 
-function New-WinRMFirewallRule($port, $protocol) {
+Function New-FirewallRule {
+    param(
+        [Parameter(mandatory=$true)][String]$Name,
+        [Parameter(mandatory=$true)][String]$Description,
+        [Parameter(mandatory=$true)][int]$Port,
+        [Parameter()][Switch]$Deny
+    )
     $fw = New-Object -ComObject HNetCfg.FWPolicy2
-    $https_rule = "Windows Remote Management ($protocol-In)"
     
-    $rules = $fw.Rules | Where-Object { $_.Name -eq $https_rule }
+    $rules = $fw.Rules | Where-Object { $_.Name -eq $Name }
     if (-not $rules) {
-        Write-Verbose -Message "Creating a new WinRM $protocol firewall rule"
+        Write-Verbose -Message "Creating new firewall rule - $Name"
         $rule = New-Object -ComObject HNetCfg.FwRule
-        $rule.Name = $https_rule
-        $rule.Description = "Inbound rule for Windows Remote Management via WS-Management. [TCP $port]"
+        $rule.Name = $name
+        $rule.Description = $Description
         $rule.Profiles = 0x7FFFFFFF
         $rules = @($rule)
     }
-    
+
     foreach ($rule in $rules) {
+        $action = 1  # Allow
+        if ($Deny.IsPresent) {
+            $action = 0  # Deny
+        }
         $rule_details = @{
-            LocalPorts = $port
+            LocalPorts = $Port
             RemotePorts = "*"
             LocalAddresses = "*"
             Enabled = $true
             Direction = 1
-            Action = 1
+            Action = $action
             Grouping = "Windows Remote Management"
             ApplicationName = "System"
         }
@@ -104,17 +113,17 @@ function New-WinRMFirewallRule($port, $protocol) {
         }
     
         if ($changed) {
-            Write-Verbose -Message "WinRM $protocol firewall rule needs to be (re)created as config does not match expectation"
+            Write-Verbose -Message "Firewall rule $($rule.Name) needs to be (re)created as config does not match expectation"
             try {
                 $fw.Rules.Add($rule)
             } catch [System.Runtime.InteropServices.COMException] {
                 # E_UNEXPECTED 0x80000FFFF means the rule already exists
                 if ($_.Exception.ErrorCode -eq 0x8000FFFF) {
-                    Write-Verbose -Message "WinRM $protocol firewall rule already exists, deleting before recreating"
+                    Write-Verbose -Message "Firewall rule $($rule.Name) already exists, deleting before recreating"
                     $fw.Rules.Remove($rule.Name)
                     $fw.Rules.Add($rule)
                 } else {
-                    Write-Verbose -Message "Failed to add WinRM $protocol firewall rule: $($_.Exception.Message)"
+                    Write-Verbose -Message "Failed to add firewall rule $($rule.Name): $($_.Exception.Message)"
                     throw $_
                 }
             }
@@ -122,7 +131,20 @@ function New-WinRMFirewallRule($port, $protocol) {
     }
 }
 
-function Reset-WinRMConfig {
+Function Remove-FirewallRule {
+    param(
+        [Parameter(mandatory=$true)][String]$Name
+    )
+    $fw = New-Object -ComObject HNetCfg.FWPolicy2
+    
+    $rules = $fw.Rules | Where-Object { $_.Name -eq $Name }
+    foreach ($rule in $rules) {
+        Write-Verbose -Message "Removing firewall rule $($rule.Name)"
+        $fw.Rules.Remove($rule.Name)
+    }
+}
+
+Function Reset-WinRMConfig {
     <#
     .SYNOPSIS
     Resets the WinRM configuration for the current host. This cmdlet will
@@ -156,7 +178,38 @@ function Reset-WinRMConfig {
         Write-Verbose "Removing all existing certificate in the personal store"
         Remove-Item -Path Cert:\LocalMachine\My\* -Force -Recurse
     }
+
+    # add a deny Firewall Rule for port 5985 and 5986 to force Vagrant to wait
+    # until all the steps are completed before returning. This deny rule is
+    # removed at the end of this process
+    Write-Verbose -Message "Creating deny WinRM Firewall rules during setup process"
+    $http_deny_rule = "PackerWindoze temp WinRM HTTP Deny rule"
+    $https_deny_rule = "PackerWindoze temp WinRM HTTPS Deny rule"
+    New-FirewallRule -Name $http_deny_rule -Description $http_deny_rule -Port 5985 -Deny
+    New-FirewallRule -Name $https_deny_rule -Description $https_deny_rule -Port 5986 -Deny
+
+    Write-Verbose -Message "Enabling Basic authentication"
+    Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
     
+    Write-Verbose -Message "Enabling CredSSP authentication"
+    Enable-WSManCredSSP -role server -Force > $null
+    
+    Write-Verbose -Message "Setting AllowUnencrypted to False"
+    Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $false
+
+    Write-Verbose -Message "Setting the LocalAccountTokenFilterPolicy registry key for remote admin access"
+    $reg_path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+    $reg_prop_name = "LocalAccountTokenFilterPolicy"
+    
+    $reg_key = Get-Item -Path $reg_path
+    $reg_prop = $reg_key.GetValue($reg_prop_name)
+    if ($reg_prop -ne 1) {
+        if ($null -eq $reg_prop) {
+            Remove-ItemProperty -Path $reg_path -Name $reg_prop_name
+        }
+        New-ItemProperty -Path $reg_path -Name $reg_prop_name -Value 1 -PropertyType DWord > $null
+    }
+
     Write-Verbose -Message "Creating HTTP listener"
     $selector_set = @{
         Transport = "HTTP"
@@ -167,6 +220,7 @@ function Reset-WinRMConfig {
     }
     New-WSManInstance -ResourceURI winrm/config/listener -SelectorSet $selector_set -ValueSet $value_set > $null
     
+    Write-Verbose -Message "Creating HTTPS listener"
     if ($CertificateThumbprint) {
         $thumbprint = $CertificateThumbprint
     } else {
@@ -181,28 +235,23 @@ function Reset-WinRMConfig {
         CertificateThumbprint = $thumbprint
         Enabled = $true
     }
-    
-    Write-Verbose -Message "Creating HTTPS listener"
     New-WSManInstance -ResourceURI "winrm/config/Listener" -SelectorSet $selector_set -ValueSet $value_set > $null
-    
+
+    Write-Verbose -Message "Configuring WinRM HTTPS firewall rule"
+    New-FirewallRule -Name "Windows Remote Management (HTTPS-In)" `
+        -Description "Inbound rule for Windows Remote Management via WS-Management. [TCP 5986]" `
+        -Port 5986
+
     Write-Verbose "Enabling PowerShell Remoting"
     # Change the verbose output for this cmdlet only as the output is really verbose
     $orig_verbose = $VerbosePreference
     $VerbosePreference = "SilentlyContinue"
     Enable-PSRemoting -Force > $null
     $VerbosePreference = $orig_verbose
-    
-    Write-Verbose -Message "Enabling Basic authentication"
-    Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
-    
-    Write-Verbose -Message "Enabling CredSSP authentication"
-    Enable-WSManCredSSP -role server -Force > $null
-    
-    Write-Verbose -Message "Setting AllowUnencrypted to False"
-    Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $false
-    
-    Write-Verbose -Message "Configuring WinRM HTTPS firewall rule"
-    New-WinRMFirewallRule -port 5986 -protocol HTTPS
+
+    Write-Verbose -Message "Removing WinRM deny firewall rules as config is complete"
+    Remove-FirewallRule -Name $http_deny_rule
+    Remove-FirewallRule -Name $https_deny_rule
     
     Write-Verbose -Message "Testing out WinRM communication over localhost"
     $session_option = New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck

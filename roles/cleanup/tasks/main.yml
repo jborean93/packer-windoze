@@ -21,6 +21,11 @@
   - C:\Windows\Panther
   - C:\Windows\Temp
 
+# win_file does not work with hidden folders
+- name: cleanup the C:\Recovery folder
+  win_shell: Remove-Item -Path C:\Recovery -Force -Recurse
+  ignore_errors: yes
+
 # we want to clear the folder contents and not the folder itself
 - name: clear out the WinSXS ManifestCache folder
   win_shell: |

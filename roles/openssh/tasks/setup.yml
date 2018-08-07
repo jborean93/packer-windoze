@@ -3,7 +3,7 @@
 ---
 - name: set openssh version to install
   set_fact:
-    pri_openssh_version: v7.6.1.0p1-Beta
+    pri_openssh_version: v7.7.2.0p1-Beta
 
 - name: set install path for 64 bit Windows
   set_fact:

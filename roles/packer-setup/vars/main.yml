@@ -1,8 +1,13 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
 - version: '0.5.0'
+  date: 2018-08-08
   changes:
-  - Disabled automatic Windows Update to eliminate post-startup thrash on older images
+  - Disabled automatic Windows Update to eliminate post-startup thrash on older images - https://github.com/jborean93/packer-windoze/issues/10
+  - Updated Win32-OpenSSH to the latest release [v7.7.2.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.7.2.0p1-Beta)
+  - Ensure WinRM HTTPS listener and firewall is configured before allowing Vagrant to detect the host is up - https://github.com/jborean93/packer-windoze/issues/11
+  - Run ngen before sysprep process to try and speed up the Vagrant init time
+  - Clean up `C:\Windows\SoftwareDistribution\Download` and `C:\Recovery` as part of the cleanup process
 - version: '0.4.0'
   date: 2018-05-16
   changes:
@@ -356,10 +361,10 @@ pri_packer_setup_host_config:
     #     * Cumulative Update for Windows Server 2016 for x64-based Systems - Security Updates
     #       https://www.catalog.update.microsoft.com/Search.aspx?q=Cumulative%20Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Security%20Updates
     bootstrap_files:
-    - name: KB4093137
-      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/03/windows10.0-kb4093137-x64_d4372b516a4e91705f68f5d38c0e1b0abf8072c9.msu
-    - name: KB4103723
-      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2018/05/windows10.0-kb4103723-x64_2adf2ea2d09b3052d241c40ba55e89741121e07e.msu
+    - name: KB4132216
+      url: http://download.windowsupdate.com/c/msdownload/update/software/crup/2018/05/windows10.0-kb4132216-x64_9cbeb1024166bdeceff90cd564714e1dcd01296e.msu
+    - name: KB4338814
+      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2018/06/windows10.0-kb4338814-x64_f4a1df3470cc06192c5157c3f574ffdc4edadabd.msu
   '1709':
     box_tag: WindowsServer1709
 
@@ -387,7 +392,11 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: no
     skip_feature_removal: yes
-    bootstrap_files: []
+    bootstrap_files:
+    - name: KB4343669
+      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/07/windows10.0-kb4343669-x64_2a58320e44d3ff803bc7016b5d02f3e85482b46f.msu
+    - name: KB4338819
+      url: http://download.windowsupdate.com/c/msdownload/update/software/secu/2018/07/windows10.0-kb4338819-x64_73cef45cbee3c689ddddf596aed7cb6a61092180.msu
   '10-x86':
     box_tag: jborean93/Windows10-x86
 

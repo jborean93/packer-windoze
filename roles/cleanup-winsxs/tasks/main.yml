@@ -49,3 +49,13 @@
 - name: setup and run cleanmgr if DISM reset base wasn't supported or cleanmgr is available
   include_tasks: cleanmgr.yml
   when: pri_cleanup_winsxs_dism_supported.stdout_lines[0] == "false" or pri_cleanup_winsxs_cleanmgr_available.stat.exists == True
+
+- name: check if the SoftwareDistribution folder exists
+  win_stat:
+    path: C:\Windows\SoftwareDistribution\Download
+  register: pri_cleanup_winsxs_download_stat
+
+- name: clear Windows Update cache download directory
+  win_shell: Remove-Item -Path "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force
+  become: yes
+  when: pri_cleanup_winsxs_download_stat.stat.exists
