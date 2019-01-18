@@ -82,6 +82,9 @@ ansible-playbook packer-setup.yml -e man_packer_setup_host_type=<host type>
 # see below what can be used for <host type> but to create the Packer files for a Server 2012 R2 image run
 ansible-playbook packer-setup.yml -e man_packer_setup_host_type=2012r2
 
+# specify custom Chocolatey packages to install instead of vim and sysinternals on the image
+ansible-playbook packer-setup.yml -e opt_packer_setup_packages='["pstools", "notepadplusplus"]'
+
 # when running on Windows, you can run this from PowerShell like
 bash.exe -ic "ansible-playbook packer-setup.yml -e man_packer_setup_host_type=2012r2 -e opt_packer_setup_builder=hyperv"
 ```
@@ -127,7 +130,14 @@ You can set the host type to the following values
 * `2012`: Windows Server 2012 Standard
 * `2012r2`: Windows Server 2012 R2 Standard
 * `2016`: Windows Server 2016 Standard
-* `1709`: Windows Server Build 1709 Standard (Requires ISO to be manually downloaded)
+
+The following host types can also be used but it requires the ISO to be
+manually downloaded and set with `opt_packager_setup_iso_path`. Microsoft does
+not offer evaluation ISOs for these builds so it won't be part of the public
+facing images
+
+* `1709`: Windows Server Build 1709 Standard
+* `1803`: Windows Server Build 1803 Standard
 
 #### Optional Variables
 
@@ -141,6 +151,7 @@ change the way Packer builds the images in the next step;
 * `opt_packer_setup_password`: (Default: `vagrant`) The password for `opt_packer_setup_username`, this password is also set for the builtin Administrator account even though it is disabled in the image.
 * `opt_packer_setup_product_key`: The product key to use when installing Windows, do not set this unless you know what you are doing.
 * `opt_packer_setup_hyperv_switch`: (Default: `packer-windoze`) The name of the Hyper-V switch to create. There shouldn't be a need to change this unless you know what you're doing.
+* `opt_packer_setup_packages`: (Default: `vim`, `sysinternals`) Override the default Chocolatey packages that are installed on each image. This should be a list of valid Chocolatey package names that are packes to the `win_chocolatey` module, see the examples for more details.
 
 To add a post-processor to upload to Vagrant Cloud, add in the following 3
 variables;

@@ -15,6 +15,7 @@
       - man_is_longhorn is defined
       - man_packer_windoze_version is defined
       - man_skip_feature_removal is defined
+      - man_personalize_choco_packages is defined
 
   - name: make sure the WinRM service is set to auto
     win_service:
@@ -24,8 +25,11 @@
   roles:
   - update
   - personalise
-  - openssh
-  #- cleanup-win10
+  - role: jborean93.win_openssh
+    opt_openssh_firewall_profiles: domain,private,public
+    opt_openssh_skip_start: True
+    opt_openssh_version: v7.9.0.0p1-Beta
+    when: not man_is_longhorn
   - cleanup-winsxs
   - cleanup-features
   - cleanup

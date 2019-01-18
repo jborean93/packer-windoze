@@ -72,7 +72,7 @@ Function New-FirewallRule {
         [Parameter()][Switch]$Deny
     )
     $fw = New-Object -ComObject HNetCfg.FWPolicy2
-    
+
     $rules = $fw.Rules | Where-Object { $_.Name -eq $Name }
     if (-not $rules) {
         Write-Verbose -Message "Creating new firewall rule - $Name"
@@ -99,7 +99,7 @@ Function New-FirewallRule {
             ApplicationName = "System"
         }
         $rule.Protocol = 6
-    
+
         $changed = $false
         foreach ($detail in $rule_details.GetEnumerator()) {
             $original_value = $rule.$($detail.Name)
@@ -111,7 +111,7 @@ Function New-FirewallRule {
                 $changed = $true
             }
         }
-    
+
         if ($changed) {
             Write-Verbose -Message "Firewall rule $($rule.Name) needs to be (re)created as config does not match expectation"
             try {
@@ -136,7 +136,7 @@ Function Remove-FirewallRule {
         [Parameter(mandatory=$true)][String]$Name
     )
     $fw = New-Object -ComObject HNetCfg.FWPolicy2
-    
+
     $rules = $fw.Rules | Where-Object { $_.Name -eq $Name }
     foreach ($rule in $rules) {
         Write-Verbose -Message "Removing firewall rule $($rule.Name)"
@@ -170,10 +170,10 @@ Function Reset-WinRMConfig {
     Param(
         [string]$CertificateThumbprint
     )
-    
+
     Write-Verbose "Removing all existing WinRM listeners"
     Remove-Item -Path WSMan:\localhost\Listener\* -Force -Recurse
-    
+
     if (-not $CertificateThumbprint) {
         Write-Verbose "Removing all existing certificate in the personal store"
         Remove-Item -Path Cert:\LocalMachine\My\* -Force -Recurse
@@ -190,24 +190,24 @@ Function Reset-WinRMConfig {
 
     Write-Verbose -Message "Enabling Basic authentication"
     Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
-    
+
     Write-Verbose -Message "Enabling CredSSP authentication"
     Enable-WSManCredSSP -role server -Force > $null
-    
+
     Write-Verbose -Message "Setting AllowUnencrypted to False"
     Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $false
 
     Write-Verbose -Message "Setting the LocalAccountTokenFilterPolicy registry key for remote admin access"
-    $reg_path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-    $reg_prop_name = "LocalAccountTokenFilterPolicy"
-    
-    $reg_key = Get-Item -Path $reg_path
-    $reg_prop = $reg_key.GetValue($reg_prop_name)
-    if ($reg_prop -ne 1) {
-        if ($null -eq $reg_prop) {
-            Remove-ItemProperty -Path $reg_path -Name $reg_prop_name
+    $token_path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
+    $token_prop_name = "LocalAccountTokenFilterPolicy"
+    $token_key = Get-Item -Path $token_path
+    $token_value = $token_key.GetValue($token_prop_name, $null)
+    if ($token_value -ne 1) {
+        Write-Verbose -Message "Setting LocalAccountTOkenFilterPolicy to 1"
+        if ($null -ne $token_value) {
+            Remove-ItemProperty -Path $token_path -Name $token_prop_name
         }
-        New-ItemProperty -Path $reg_path -Name $reg_prop_name -Value 1 -PropertyType DWord > $null
+        New-ItemProperty -Path $token_path -Name $token_prop_name -Value 1 -PropertyType DWORD > $null
     }
 
     Write-Verbose -Message "Creating HTTP listener"
@@ -219,7 +219,7 @@ Function Reset-WinRMConfig {
         Enabled = $true
     }
     New-WSManInstance -ResourceURI winrm/config/listener -SelectorSet $selector_set -ValueSet $value_set > $null
-    
+
     Write-Verbose -Message "Creating HTTPS listener"
     if ($CertificateThumbprint) {
         $thumbprint = $CertificateThumbprint
@@ -252,7 +252,7 @@ Function Reset-WinRMConfig {
     Write-Verbose -Message "Removing WinRM deny firewall rules as config is complete"
     Remove-FirewallRule -Name $http_deny_rule
     Remove-FirewallRule -Name $https_deny_rule
-    
+
     Write-Verbose -Message "Testing out WinRM communication over localhost"
     $session_option = New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck
     $invoke_args = @{
@@ -262,7 +262,7 @@ Function Reset-WinRMConfig {
     }
     Invoke-Command @invoke_args > $null
     Invoke-Command -UseSSL @invoke_args > $null
-    
+
     Write-Verbose -Message "WinRM and PS Remoting have been set up successfully"
 }
 

@@ -4,12 +4,17 @@
     that:
     - man_packer_setup_host_type is defined
 
+- name: ensure Galaxy requirements have been downloaded
+  command: ansible-galaxy install -r requirements.yml -p roles
+  args:
+    chdir: '{{ playbook_dir }}'
+
 - name: check that the host type specified is valid
   fail:
     msg: man_packer_setup_host_type {{man_packer_setup_host_type}} is not a valid host type, expecting {{pri_packer_setup_host_config.keys()}}
   when: pri_packer_setup_host_config[man_packer_setup_host_type] is not defined
 
-- name: verify that a non support Hyper-V configuration isn't set
+- name: verify that a non supported Hyper-V configuration isn't set
   fail:
     msg: man_packer_setup_host_type {{man_packer_setup_host_type}} is not supported with the Hyper-V builder
   when: opt_packer_setup_builder == 'hyperv' and man_packer_setup_host_type in ["2008-x86", "2008-x64"]
@@ -28,6 +33,12 @@
 - name: download and extract ISO's that end with .exe
   include_tasks: download_extract_iso.yml
   when: pri_packer_setup_config.iso_url.endswith('.exe') and opt_packer_setup_iso_path is not defined
+
+- name: download Virtio ISO for VirtualBox build
+  get_url:
+    url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso
+    dest: '{{man_packer_setup_host_type}}/virtio.iso'
+  when: opt_packer_setup_builder == 'virtualbox'
 
 - name: create Hyper-V External Network switch
   block:

@@ -1,5 +1,16 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
+- version: '0.6.0'
+  date: TBD  # waiting on Microsoft to release the 2019 evaluation ISO
+  changes:
+  - Fix logic when setting the `LocalAccountTokenFilterPolicy` value when setting up the WinRM listener
+  - Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure
+  - Moved away from custom role to install the Win32-OpenSSH components, now using the [jborean93.win_openssh](https://galaxy.ansible.com/jborean93/win_openssh) role
+  - Updated OpenSSH version [7.9.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.9.0.0p1-Beta)
+  - Installed the [virtio-network](https://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
+  host_specific_changes:
+    2016:
+    - Changed the default Windows Explorer window to show `This PC` instead of `Quick access`
 - version: '0.5.0'
   date: 2018-08-08
   changes:
@@ -117,6 +128,19 @@ pri_packer_setup_builders_info:
       - dvddrive
       - --medium
       - '{{man_packer_setup_host_type}}/secondary.iso'
+    -
+      - storageattach
+      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - --storagectl
+      - Sata Controller
+      - --port
+      - "2"
+      - --device
+      - "0"
+      - --type
+      - dvddrive
+      - --medium
+      - '{{man_packer_setup_host_type}}/virtio.iso'
     vboxmanage_post:
     -
       - storagectl
@@ -201,6 +225,7 @@ pri_packer_setup_json:
 #   answer_longhorn: Whether the host type will use the older Server 2008 answer file
 #   product_key: The KMS product key required in setup, only used in Server 2008 answer file
 #   box_tag: This is the box tag that I use, this can be overriden with opt_packer_setup_box_tag
+#   driver_host_string: The host string name used for the Virtio drivers
 #   bootstrap_files: A list of dictionaries that contains files to download for use in the bootstrapping process, this also modifies the bootstrapping script
 pri_packer_setup_host_config:
   # host pattern <osname-[architecture]-[option]> where architecture and option
@@ -218,6 +243,7 @@ pri_packer_setup_host_config:
     architecture: x86
     answer_longhorn: yes
     product_key: TM24T-X9RMF-VWXK6-X8JC9-BFGM2
+    driver_host_string: 2k8
     bootstrap_files:
     - name: Server 2008 SP2
       url: https://download.microsoft.com/download/E/7/7/E77CBA41-0B6B-4398-BBBF-EE121EEC0535/Windows6.0-KB948465-X86.exe
@@ -252,6 +278,7 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: yes
     product_key: TM24T-X9RMF-VWXK6-X8JC9-BFGM2
+    driver_host_string: 2k8
     bootstrap_files:
     - name: Server 2008 SP2
       url: https://download.microsoft.com/download/4/7/3/473B909B-7B52-49FE-A443-2E2985D3DFC3/Windows6.0-KB948465-X64.exe
@@ -285,6 +312,7 @@ pri_packer_setup_host_config:
     iso_wim_label: Windows Server 2008 R2 SERVERSTANDARD
     architecture: amd64
     answer_longhorn: no
+    driver_host_string: 2k8R2
     bootstrap_files:
     - name: .NET v4.5
       url: http://download.microsoft.com/download/B/A/4/BA4A7E71-2906-4B2D-A0E1-80CF16844F5F/dotNetFx45_Full_x86_x64.exe
@@ -314,6 +342,7 @@ pri_packer_setup_host_config:
     iso_wim_label: Windows Server 2012 SERVERSTANDARD
     architecture: amd64
     answer_longhorn: no
+    driver_host_string: 2k12
     bootstrap_files:
     - name: TiWorker Slow Performance Fix
       url: https://download.microsoft.com/download/D/D/C/DDC353A0-A56D-48E8-B2C0-97615C503145/Windows8-RT-KB2771431-x64.msu
@@ -336,6 +365,7 @@ pri_packer_setup_host_config:
     iso_wim_label: Windows Server 2012 R2 SERVERSTANDARD
     architecture: amd64
     answer_longhorn: no
+    driver_host_string: 2k12R2
     bootstrap_files: []
   '2016':
     box_tag: jborean93/WindowsServer2016
@@ -350,6 +380,7 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: no
     skip_feature_removal: yes
+    driver_host_string: 2k16
     # to speed the process up, you can manually find the latest KB for the
     # following updates and put them here. Installing in the bootstrapping
     # process is a lot faster than through the WUA. Open up
@@ -361,10 +392,10 @@ pri_packer_setup_host_config:
     #     * Cumulative Update for Windows Server 2016 for x64-based Systems - Security Updates
     #       https://www.catalog.update.microsoft.com/Search.aspx?q=Cumulative%20Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Security%20Updates
     bootstrap_files:
-    - name: KB4132216
-      url: http://download.windowsupdate.com/c/msdownload/update/software/crup/2018/05/windows10.0-kb4132216-x64_9cbeb1024166bdeceff90cd564714e1dcd01296e.msu
-    - name: KB4338814
-      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2018/06/windows10.0-kb4338814-x64_f4a1df3470cc06192c5157c3f574ffdc4edadabd.msu
+    - name: KB4456655
+      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/09/windows10.0-kb4456655-x64_fca3f0c885da48efc6f9699b0c1eaf424e779434.msu
+    - name: KB4480961
+      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2019/01/windows10.0-kb4480961-x64_ada63f8d66b2c9994e03c3f5bffe56aff77edeb6.msu
   '1709':
     box_tag: WindowsServer1709
 
@@ -378,6 +409,7 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: no
     skip_feature_removal: yes
+    driver_host_string: 2k16
     bootstrap_files: []
   '1803':
     box_tag: WindowsServer1803
@@ -392,34 +424,52 @@ pri_packer_setup_host_config:
     architecture: amd64
     answer_longhorn: no
     skip_feature_removal: yes
-    bootstrap_files:
-    - name: KB4343669
-      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/07/windows10.0-kb4343669-x64_2a58320e44d3ff803bc7016b5d02f3e85482b46f.msu
-    - name: KB4338819
-      url: http://download.windowsupdate.com/c/msdownload/update/software/secu/2018/07/windows10.0-kb4338819-x64_73cef45cbee3c689ddddf596aed7cb6a61092180.msu
-  '10-x86':
-    box_tag: jborean93/Windows10-x86
+    driver_host_string: 2k16
+    bootstrap_files: []
+#    bootstrap_files:
+#    - name: KB4343669
+#      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/07/windows10.0-kb4343669-x64_2a58320e44d3ff803bc7016b5d02f3e85482b46f.msu
+#    - name: KB4338819
+#      url: http://download.windowsupdate.com/c/msdownload/update/software/secu/2018/07/windows10.0-kb4338819-x64_73cef45cbee3c689ddddf596aed7cb6a61092180.msu
+  '2019':
+    box_tag: jborean93/WindowsServer2019
 
-    iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x86FRE_en-us.iso
-    iso_checksum: f2c39358d7186adae6825096c514edd6
-    vb_guest_os_type: Windows10
+    iso_url: https://software-download.microsoft.com/download/sg/17763.253.190108-0006.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us.iso
+    iso_checksum: 48cd91270581d1be10c3ff3ad6c41cce
+    vb_guest_os_type: Windows2016_64
     vb_forwarded_port: 55989
     hv_generation: 2
 
-    iso_wim_label: Windows 10 Enterprise Evaluation
-    architecture: x86
-    answer_longhorn: no
-    bootstrap_files: []
-  '10-x64':
-    box_tag: jborean93/Windows10-x64
-
-    iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
-    iso_checksum: f4f85d77516721d9a19ca866172a5ecb
-    vb_guest_os_type: Windows10_64
-    vb_forwarded_port: 55990
-    hv_generation: 2
-
-    iso_wim_label: Windows 10 Enterprise Evaluation
+    iso_wim_label: Windows Server 2019 SERVERSTANDARD
     architecture: amd64
     answer_longhorn: no
+    skip_feature_removal: yes
+    driver_host_string: 2k16
     bootstrap_files: []
+
+#  '10-x86':
+#    box_tag: jborean93/Windows10-x86
+#
+#    iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x86FRE_en-us.iso
+#    iso_checksum: f2c39358d7186adae6825096c514edd6
+#    vb_guest_os_type: Windows10
+#    vb_forwarded_port: 55989
+#    hv_generation: 2
+#
+#    iso_wim_label: Windows 10 Enterprise Evaluation
+#    architecture: x86
+#    answer_longhorn: no
+#    bootstrap_files: []
+#  '10-x64':
+#    box_tag: jborean93/Windows10-x64
+#
+#    iso_url: http://care.dlservice.microsoft.com/dl/download/6/5/D/65D18931-F626-4A35-AD5B-F5DA41FE6B76/16299.15.170928-1534.rs3_release_CLIENTENTERPRISEEVAL_OEMRET_x64FRE_en-us.iso
+#    iso_checksum: f4f85d77516721d9a19ca866172a5ecb
+#    vb_guest_os_type: Windows10_64
+#    vb_forwarded_port: 55990
+#    hv_generation: 2
+#
+#    iso_wim_label: Windows 10 Enterprise Evaluation
+#    architecture: amd64
+#    answer_longhorn: no
+#    bootstrap_files: []

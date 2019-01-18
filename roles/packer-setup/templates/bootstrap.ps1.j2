@@ -35,7 +35,7 @@ Function Run-Process($executable, $arguments) {
     $psi.Arguments = $arguments
     Write-Log -message "starting new process '$executable $arguments'"
     $process.Start() | Out-Null
-    
+
     $process.WaitForExit() | Out-Null
     $exit_code = $process.ExitCode
     Write-Log -message "process completed with exit code '$exit_code'"
@@ -72,6 +72,15 @@ Function Extract-Zip($zip, $dest) {
     }
 }
 
+Function Get-NetKVMDriverPath {
+    $drive = (Get-PSDrive -PSProvider FileSystem).Name | Where-Object { Test-Path -LiteralPath "$($_):\NetKVM" }
+
+    $host_key = "{{ pri_packer_setup_config.driver_host_string }}"
+    $architecture = $env:PROCESSOR_ARCHITECTURE
+    $inf_path = "$($drive):\NetKVM\$host_key\$architecture\netkvm.inf"
+    return $inf_path
+}
+
 $action = $args[0]
 if (-not (Test-Path -Path $tmp_dir)) {
     New-Item -Path $tmp_dir -ItemType Directory | Out-Null
@@ -89,6 +98,13 @@ $bootstrap_actions = @(
         arguments = "{{action.arguments|default("/quiet /norestart")}}"
     },
 {% endfor %}
+{% if opt_packer_setup_builder == 'virtualbox' %}
+    @{
+        name = "Red Hat Virtio Network Driver"
+        path = Get-NetKVMDriverPath
+        action = "driver"
+    },
+{% endif %}
     @{
         name = "Configure WinRM"
         action = "winrm"
@@ -161,6 +177,60 @@ for ($i = 0; $i -lt $actions.Count; $i++) {
                 throw $error_message
             }
         }
+        "driver" {
+            Write-Log -message "Installing driver $($current_action.name)"
+            Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+namespace PackerWindoze
+{
+    public class NativeMethods
+    {
+        [DllImport("Newdev.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        public static extern bool DiInstallDriverW(
+            IntPtr hwndParent,
+            string InfPath,
+            UInt32 Flags,
+            out bool NeedReboot);
+    }
+}
+'@
+
+            $sys_path = Get-ChildItem -Path (Split-Path -Path $current_action.path -Parent) -Filter "*.sys" -File
+            $driver_cert = (Get-AuthenticodeSignature -LiteralPath $sys_path.FullName).SignerCertificate
+
+            $trusted_certs = (Get-ChildItem -Path Cert:\LocalMachine\TrustedPublisher).Thumbprint
+            if ($driver_cert.Thumbprint -notin $trusted_certs) {
+                Write-Log -message "Certificate $($driver_cert.Thumbprint) not in TrustedPublisher store"
+                $store_name = [System.Security.Cryptography.X509Certificates.StoreName]::TrustedPublisher
+                $store_location = [System.Security.Cryptography.X509Certificates.Storelocation]::LocalMachine
+
+                $store = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $store_name, $store_location
+                $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+                try {
+                    $store.Add($driver_cert)
+                } finally {
+                    $store.Dispose()
+                }
+            }
+
+            $needs_reboot = $false
+            $res = [PackerWindoze.NativeMethods]::DiInstallDriverW([IntPtr]::Zero, $current_action.path, 0, [ref]$needs_reboot)
+            if (-not $res) {
+                $err = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+                try {
+                    throw [System.ComponentModel.Win32Exception]$err
+                } catch [System.ComponentModel.Win32Exception] {
+                    $error_msg = "failed to install driver $($current_action.name) - {0} (Win32 Error Code {1} - 0x{1:X8})" -f $_.Exception.Message, $err
+                }
+                Write-Log -message $error_message -level "ERROR"
+                throw $error_message
+            }
+            if ($needs_reboot) {
+                Reboot-AndResume -action $next_action.name
+            }
+        }
         "winrm" {
             Write-Log -message "configuring WinRM listener to work over 5985 with Basic auth"
             &winrm.cmd quickconfig -q
@@ -176,7 +246,7 @@ for ($i = 0; $i -lt $actions.Count; $i++) {
                     throw $error_message
                 }
             }
-    
+
             Write-Log -message "enabling RDP"
             $rdp_wmi = Get-CimInstance -ClassName Win32_TerminalServiceSetting -Namespace root\CIMV2\TerminalServices
             $rdp_enable = $rdp_wmi | Invoke-CimMethod -MethodName SetAllowTSConnections -Arguments @{ AllowTSConnections = 1; ModifyFirewallException = 1 }
@@ -185,7 +255,7 @@ for ($i = 0; $i -lt $actions.Count; $i++) {
                 Write-Log -message $error_message -level "ERROR"
                 throw $error_message
             }
-    
+
             Write-Log -message "enabling NLA authentication for RDP"
             $nla_wmi = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace root\CIMV2\TerminalServices
             $nla_wmi | Invoke-CimMethod -MethodName SetUserAuthenticationRequired -Arguments @{ UserAuthenticationRequired = 1 } | Out-Null

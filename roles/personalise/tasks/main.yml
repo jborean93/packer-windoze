@@ -37,11 +37,6 @@
     type: dword
     state: present
     hive: C:\Users\Default\NTUSER.dat
-  register: pri_personalise_profile_reg_change
-  # seems like this fails to unload in Packer for whatever reason, we don't want to fail if we got that error
-  failed_when:
-  - pri_personalise_profile_reg_change is failed
-  - '"Failed to unload registry hive at ANSIBLE" not in pri_personalise_profile_reg_change.msg'
   loop:
   - name: Hidden
     data: 1
@@ -56,10 +51,6 @@
     type: string
     state: '{{item.state}}'
     hive: C:\Users\Default\NTUSER.dat
-  register: pri_personalise_screensaver_reg_change
-  failed_when:
-  - pri_personalise_screensaver_reg_change is failed
-  - '"Failed to unload registry hive at ANSIBLE" not in pri_personalise_screensaver_reg_change.msg'
   when: man_host_type == '2008-x86' or man_host_type == '2008-x64'
   loop:
   - name: ScreenSaveActive
@@ -68,14 +59,20 @@
   - name: SCRNSAVE.EXE
     state: absent
 
-- name: check if ANSIBLE key was successfully unloaded
-  win_reg_stat:
-    path: HKLM:\ANSIBLE
-  register: pri_personalise_reg_ansible_stat
-
-- name: unload ANSIBLE key
-  win_command: reg.exe unload HKLM\ANSIBLE
-  when: pri_personalise_reg_ansible_stat.exists == True
+- name: set This PC as the default view for Windows Explorer for the default user profile
+  win_regedit:
+    path: HKLM:\ANSIBLE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+    name: LaunchTo
+    data: 1
+    type: dword
+    state: present
+    hive: C:\Users\Default\NTUSER.dat
+  when:  # this is only valid for 2016/10+
+  - man_host_type != '2008-x86'
+  - man_host_type != '2008-x64'
+  - man_host_type != '2008r2'
+  - man_host_type != '2012'
+  - man_host_type != '2012r2'
 
 - name: set show hidden files/folders and file extensions for the current user profile
   win_regedit:
@@ -105,6 +102,20 @@
   - name: SCRNSAVE.EXE
     state: absent
 
+- name: set This PC as the default view for Windows Explorer for the current user profile
+  win_regedit:
+    path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+    name: LaunchTo
+    data: 1
+    type: dword
+    state: present
+  when:
+  - man_host_type != '2008-x86'
+  - man_host_type != '2008-x64'
+  - man_host_type != '2008r2'
+  - man_host_type != '2012'
+  - man_host_type != '2012r2'
+
 - name: disable automatic updates (prevents TrustedInstaller startup thrash on older images)
   win_regedit:
     path: HKLM:\Software\Policies\Microsoft\Windows\WindowsUpdate\AU
@@ -113,13 +124,18 @@
     type: dword
     state: present
 
-- name: install sysinternals and vim
+- name: install set Chocolatey packages
   win_chocolatey:
-    name: '{{item}}'
+    name: '{{item}}'  # TODO: set list directly here when 2.7 is the min version
     state: present
-  loop:
-  - sysinternals
-  - vim
+  when:
+  - man_personalize_choco_packages|count > 0
+  - item != ''
+  loop: '{{man_personalize_choco_packages}}'
+  become: yes
+  vars:  # run with become as we aren't sure what packages the user has specified
+    ansible_become_user: '{{ansible_user}}'
+    ansible_become_pass: '{{ansible_password}}'
 
 - name: install the VirtualBox Guest Additions
   include_tasks: virtualbox.yml

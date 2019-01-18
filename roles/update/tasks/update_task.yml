@@ -1,6 +1,6 @@
 ---
 - block:
-  - name: check if there are missing updates - {{category_info.name}}
+  - name: check if there are missing updates - {{category_info.name}} - round {{loop_number}}
     win_updates:
       category_names:
       - '{{category_info.name}}'
@@ -19,7 +19,7 @@
     win_reboot:
       reboot_timeout: 1200
 
-  - name: check if there are missing updates - {{category_info.name}} ATTEMPT 2
+  - name: check if there are missing updates - {{category_info.name}} - round {{loop_number}} ATTEMPT 2
     win_updates:
       category_names:
       - '{{category_info.name}}'
@@ -32,7 +32,7 @@
     update_stat: '{{update_stat|update_merge(category_info.name, True)}}'
   when: pri_update_count.found_update_count is defined and pri_update_count.found_update_count == 0 and (loop_number != 1 and loop_number != 2)
 
-- name: install windows updates - {{category_info.name}}
+- name: install windows updates - {{category_info.name}} - round {{loop_number}}
   win_updates:
     category_names:
     - '{{category_info.name}}'

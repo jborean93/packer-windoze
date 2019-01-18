@@ -11,6 +11,9 @@ Vagrantfile
 hosts-*
 *.retry
 
+# Galaxy files
+roles/jborean.*
+
 # Temp Packer files
 2008-x86/
 2008-x64/
@@ -18,6 +21,7 @@ hosts-*
 2012
 2012r2/
 2016/
+2019/
 1709/
 1803/
 10-x86/

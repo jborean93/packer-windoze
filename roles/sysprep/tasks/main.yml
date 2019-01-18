@@ -61,3 +61,26 @@
         $system.AutomaticManagedPagefile = $true
         $system.Put()
     }
+
+- name: 0 out empty space for later compression
+  win_shell: |
+    $path = "C:\zero"
+    $volume = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'"
+    $block_size = 64kb
+    $leftover_size = $volume.Size * 0.05
+    $file_size = $volume.FreeSpace - $leftover_size
+    $data_array = New-Object -TypeName byte[]($block_size)
+
+    $stream = [System.IO.File]::OpenWrite($path)
+    try {
+        $current_file_size = 0
+        while ($current_file_size -lt $file_size) {
+            $stream.Write($data_array, 0, $data_array.Length)
+            $current_file_size += $data_array.Length
+        }
+    } finally {
+        if ($stream) {
+            $stream.Close()
+        }
+    }
+    Remove-Item -Path $path -Force | Out-Null

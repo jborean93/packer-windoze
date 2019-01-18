@@ -6,6 +6,16 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v0.6.0 - TBD
+
+* Fix logic when setting the `LocalAccountTokenFilterPolicy` value when setting up the WinRM listener
+* Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure
+* Moved away from custom role to install the Win32-OpenSSH components, now using the [jborean93.win_openssh](https://galaxy.ansible.com/jborean93/win_openssh) role
+* Updated OpenSSH version [7.9.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.9.0.0p1-Beta)
+* Installed the [virtio-network](https://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
+* 2016
+    * Changed the default Windows Explorer window to show `This PC` instead of `Quick access`
+
 ### v0.5.0 - 2018-08-08
 
 * Disabled automatic Windows Update to eliminate post-startup thrash on older images - https://github.com/jborean93/packer-windoze/issues/10

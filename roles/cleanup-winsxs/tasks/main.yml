@@ -48,7 +48,7 @@
 
 - name: setup and run cleanmgr if DISM reset base wasn't supported or cleanmgr is available
   include_tasks: cleanmgr.yml
-  when: pri_cleanup_winsxs_dism_supported.stdout_lines[0] == "false" or pri_cleanup_winsxs_cleanmgr_available.stat.exists == True
+  when: pri_cleanup_winsxs_dism_supported.stdout_lines[0] == "false" and pri_cleanup_winsxs_cleanmgr_available.stat.exists == True
 
 - name: check if the SoftwareDistribution folder exists
   win_stat:
