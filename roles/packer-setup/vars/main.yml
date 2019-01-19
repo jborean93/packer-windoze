@@ -213,7 +213,7 @@ pri_packer_setup_json:
 #   iso_checksum: The md5 checksum of the evaluation ISO
 
 #   VirtualBox specifics for the host
-#   vb_guest_os_type: The VirtualBox guest os type used when builing the VM
+#   vb_guest_os_type: The VirtualBox guest os type used when builing the VM, run 'VBoxManage list ostypes' to get a valid list
 #   vb_forwarded_port: The port to set on 127.0.0.1 that will forward to port 5986 on the Windows host, this should be unique
 
 #   Hyper-V specific for the host
@@ -436,7 +436,7 @@ pri_packer_setup_host_config:
 
     iso_url: https://software-download.microsoft.com/download/sg/17763.253.190108-0006.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us.iso
     iso_checksum: 48cd91270581d1be10c3ff3ad6c41cce
-    vb_guest_os_type: Windows2016_64
+    vb_guest_os_type: Windows2016_64  # TODO: change to Windows2019_64 when available
     vb_forwarded_port: 55989
     hv_generation: 2
 

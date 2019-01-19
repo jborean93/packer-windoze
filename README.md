@@ -130,6 +130,7 @@ You can set the host type to the following values
 * `2012`: Windows Server 2012 Standard
 * `2012r2`: Windows Server 2012 R2 Standard
 * `2016`: Windows Server 2016 Standard
+* `2019`: Windows Server 2019 Standard
 
 The following host types can also be used but it requires the ISO to be
 manually downloaded and set with `opt_packager_setup_iso_path`. Microsoft does
