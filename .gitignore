@@ -12,7 +12,7 @@ hosts-*
 *.retry
 
 # Galaxy files
-roles/jborean.*
+roles/jborean93.*
 
 # Temp Packer files
 2008-x86/

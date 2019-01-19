@@ -2,6 +2,12 @@ $ErrorActionPreference = 'Stop'
 $tmp_dir = "$env:SystemDrive\temp"
 $script_dir = Split-Path -Path $($script:MyInvocation.MyCommand.Path) -Parent
 
+trap {
+    $msg = "Unhandled exception`r`n$($_ | Out-String)"
+    Write-Log -message $msg -level "ERROR"
+    Write-Error -ErrorRecord $_
+}
+
 Function Write-Log($message, $level="INFO") {
     # Poor man's implementation of Log4Net
     $date_stamp = Get-Date -Format s
@@ -73,7 +79,16 @@ Function Extract-Zip($zip, $dest) {
 }
 
 Function Get-NetKVMDriverPath {
-    $drive = (Get-PSDrive -PSProvider FileSystem).Name | Where-Object { Test-Path -LiteralPath "$($_):\NetKVM" }
+    $drive = (Get-PSDrive -PSProvider FileSystem).Name | Where-Object {
+        $drive = $_
+        # Annoying hack to run with PSv1, Test-Path complain if a null value is
+        # in the string, and $_ isn't valid in PSv1. We don't run this cmdlet
+        # in this version so this is just to get the whole script running
+        if ($null -eq $drive) {
+            $drive = "C"
+        }
+        Test-Path -LiteralPath "$($drive):\NetKVM"
+    }
 
     $host_key = "{{ pri_packer_setup_config.driver_host_string }}"
     $architecture = $env:PROCESSOR_ARCHITECTURE
@@ -201,7 +216,12 @@ namespace PackerWindoze
             $driver_cert = (Get-AuthenticodeSignature -LiteralPath $sys_path.FullName).SignerCertificate
 
             $trusted_certs = (Get-ChildItem -Path Cert:\LocalMachine\TrustedPublisher).Thumbprint
-            if ($driver_cert.Thumbprint -notin $trusted_certs) {
+            if ($null -eq $trusted_certs) {
+                # The 1st arg of IndexOf cannot be $null so this is a sanity check for that
+                $trusted_certs = @()
+            }
+            # Cannot use -in or -notin as PSv1 (Server 2008) will fail to parse the script
+            if (($null -ne $driver_cert.Thumbprint) -and ([System.Array]::IndexOf($trusted_certs, $driver_cert.Thumbprint) -eq -1)) {
                 Write-Log -message "Certificate $($driver_cert.Thumbprint) not in TrustedPublisher store"
                 $store_name = [System.Security.Cryptography.X509Certificates.StoreName]::TrustedPublisher
                 $store_location = [System.Security.Cryptography.X509Certificates.Storelocation]::LocalMachine
@@ -211,7 +231,8 @@ namespace PackerWindoze
                 try {
                     $store.Add($driver_cert)
                 } finally {
-                    $store.Dispose()
+                    # Only .NET 4.6.2 has X509 as an IDisposable, use Close for backwards compatibility
+                    $store.Close()
                 }
             }
 
