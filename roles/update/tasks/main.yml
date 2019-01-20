@@ -9,8 +9,8 @@
 - name: enable verbose logging (WUA seems to fail on some installs without this)
   win_regedit:
     path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Trace
-    name: '{{item.name}}'
-    data: '{{item.data}}'
+    name: '{{ item.name }}'
+    data: '{{ item.data }}'
     type: dword
   loop:
   - name: Flags

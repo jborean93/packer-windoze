@@ -12,5 +12,6 @@ install:
 script:
 # show the ansible-lint version
 - ansible-lint --version
-- ansible-lint packer-setup.yml
-- ansible-lint main.yml
+# TODO: fix the line length ignore
+- ansible-lint packer-setup.yml -x 204
+- ansible-lint main.yml -x 204

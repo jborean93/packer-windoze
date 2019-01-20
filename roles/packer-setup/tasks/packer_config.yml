@@ -1,21 +1,21 @@
 ---
 - name: set fact of packer host config based on host_type
   set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_host_config[man_packer_setup_host_type]}}'
+    pri_packer_setup_config: '{{ pri_packer_setup_host_config[man_packer_setup_host_type] }}'
 
 - name: override iso_url with opt_packer_setup_iso_path if defined
   set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_url", opt_packer_setup_iso_path)}}'
+    pri_packer_setup_config: '{{ pri_packer_setup_config|update_dict("iso_url", opt_packer_setup_iso_path) }}'
   when: opt_packer_setup_iso_path is defined
 
 - name: override iso_wim_label with opt_packer_setup_iso_wim_label if defined
   set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("iso_wim_label", opt_packer_setup_iso_wim_label)}}'
+    pri_packer_setup_config: '{{ pri_packer_setup_config|update_dict("iso_wim_label", opt_packer_setup_iso_wim_label) }}'
   when: opt_packer_setup_iso_wim_label is defined
 
 - name: override product_key with opt_packer_setup_product_key if defined
   set_fact:
-    pri_packer_setup_config: '{{pri_packer_setup_config|update_dict("product_key", opt_packer_setup_product_key)}}'
+    pri_packer_setup_config: '{{ pri_packer_setup_config|update_dict("product_key", opt_packer_setup_product_key) }}'
   when: opt_packer_setup_product_key is defined
 
 - name: assert that iso_url is set or overriden with opt_packer_setup_iso_path
@@ -26,34 +26,34 @@
 
 - name: create Packer builder info
   set_fact:
-    pri_packer_setup_builders: '{{pri_packer_setup_builders_info.common|merge_dict(pri_packer_setup_builders_info[opt_packer_setup_builder])}}'
+    pri_packer_setup_builders: '{{ pri_packer_setup_builders_info.common|merge_dict(pri_packer_setup_builders_info[opt_packer_setup_builder]) }}'
 
 - name: create Packer provisioner info
   set_fact:
-    pri_packer_setup_provisioners: '{{pri_packer_setup_provisioners_info.common + pri_packer_setup_provisioners_info[opt_packer_setup_builder]}}'
+    pri_packer_setup_provisioners: '{{ pri_packer_setup_provisioners_info.common + pri_packer_setup_provisioners_info[opt_packer_setup_builder] }}'
 
 - name: create Packer post-provisioners info
   set_fact:
-    pri_packer_setup_post_processors: '{{pri_packer_setup_post_processors_info.common|merge_dict(pri_packer_setup_post_processors_info[opt_packer_setup_builder])}}'
+    pri_packer_setup_post_processors: '{{ pri_packer_setup_post_processors_info.common|merge_dict(pri_packer_setup_post_processors_info[opt_packer_setup_builder]) }}'
 
 - name: set opt_packer_setup_box_tag if it isn't defined
   set_fact:
-    opt_packer_setup_box_tag: '{{pri_packer_setup_config.box_tag}}'
+    opt_packer_setup_box_tag: '{{ pri_packer_setup_config.box_tag }}'
   when: opt_packer_setup_box_tag is not defined
 
 - name: add vagrant-cloud post-processor if upload vars are set
   set_fact:
     pri_packer_setup_post_processors:
-    - '{{pri_packer_setup_post_processors}}'
+    - '{{ pri_packer_setup_post_processors }}'
     - type: vagrant-cloud
-      access_token: '{{opt_packer_setup_access_token}}'
-      box_tag: '{{opt_packer_setup_box_tag}}'
-      version: '{{opt_packer_setup_version|default(pri_packer_setup_changelog[0].version)}}'
-      version_description: "{{lookup('template', 'description.md.j2')}}"
+      access_token: '{{ opt_packer_setup_access_token }}'
+      box_tag: '{{ opt_packer_setup_box_tag }}'
+      version: '{{ opt_packer_setup_version|default(pri_packer_setup_changelog[0].version) }}'
+      version_description: "{{ lookup('template', 'description.md.j2') }}"
   when:
   - opt_packer_setup_access_token is defined
 
 - name: create packer.json file based on vars set
   copy:
-    content: '{{pri_packer_setup_json|to_nice_json}}'
-    dest: '{{man_packer_setup_host_type}}/packer.json'
+    content: '{{ pri_packer_setup_json|to_nice_json }}'
+    dest: '{{ man_packer_setup_host_type }}/packer.json'

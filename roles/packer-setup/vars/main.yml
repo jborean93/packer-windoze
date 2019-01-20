@@ -1,7 +1,7 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
 - version: '0.6.0'
-  date: TBD  # waiting on Microsoft to release the 2019 evaluation ISO
+  date: 2019-01-20
   changes:
   - Fix logic when setting the `LocalAccountTokenFilterPolicy` value when setting up the WinRM listener
   - Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure

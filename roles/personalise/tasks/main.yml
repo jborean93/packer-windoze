@@ -3,9 +3,9 @@
   block:
   - name: enable TLSv1.2 support for Server 2008 and 2008 R2
     win_regedit:
-      path: HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\{{item.type}}
-      name: '{{item.property}}'
-      data: '{{item.value}}'
+      path: HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\{{ item.type }}
+      name: '{{ item.property }}'
+      data: '{{ item.value }}'
       type: dword
       state: present
     register: pri_personalise_tls_config
@@ -32,8 +32,8 @@
 - name: set show hidden files/folders and file extensions for the default user profile
   win_regedit:
     path: HKLM:\ANSIBLE\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
-    name: '{{item.name}}'
-    data: '{{item.data}}'
+    name: '{{ item.name }}'
+    data: '{{ item.data }}'
     type: dword
     state: present
     hive: C:\Users\Default\NTUSER.dat
@@ -46,10 +46,10 @@
 - name: disable screensaver for Server 2008 for the default user profile
   win_regedit:
     path: HKLM:\ANSIBLE\Control Panel\Desktop
-    name: '{{item.name}}'
-    data: '{{item.value|default(omit)}}'
+    name: '{{ item.name }}'
+    data: '{{ item.value|default(omit) }}'
     type: string
-    state: '{{item.state}}'
+    state: '{{ item.state }}'
     hive: C:\Users\Default\NTUSER.dat
   when: man_host_type == '2008-x86' or man_host_type == '2008-x64'
   loop:
@@ -77,8 +77,8 @@
 - name: set show hidden files/folders and file extensions for the current user profile
   win_regedit:
     path: HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
-    name: '{{item.name}}'
-    data: '{{item.data}}'
+    name: '{{ item.name }}'
+    data: '{{ item.data }}'
     type: dword
     state: present
   loop:
@@ -90,10 +90,10 @@
 - name: disable screensaver for Server 2008 for the current user profile
   win_regedit:
     path: HKCU:\Control Panel\Desktop
-    name: '{{item.name}}'
-    data: '{{item.value|default(omit)}}'
+    name: '{{ item.name }}'
+    data: '{{ item.value|default(omit) }}'
     type: string
-    state: '{{item.state}}'
+    state: '{{ item.state }}'
   when: man_host_type == '2008-x86' or man_host_type == '2008-x64'
   loop:
   - name: ScreenSaveActive
@@ -126,16 +126,16 @@
 
 - name: install set Chocolatey packages
   win_chocolatey:
-    name: '{{item}}'  # TODO: set list directly here when 2.7 is the min version
+    name: '{{ item }}'  # TODO: set list directly here when 2.7 is the min version
     state: present
   when:
   - man_personalize_choco_packages|count > 0
-  - item != ''
-  loop: '{{man_personalize_choco_packages}}'
+  - item
+  loop: '{{ man_personalize_choco_packages }}'
   become: yes
   vars:  # run with become as we aren't sure what packages the user has specified
-    ansible_become_user: '{{ansible_user}}'
-    ansible_become_pass: '{{ansible_password}}'
+    ansible_become_user: '{{ ansible_user }}'
+    ansible_become_pass: '{{ ansible_password }}'
 
 - name: install the VirtualBox Guest Additions
   include_tasks: virtualbox.yml
