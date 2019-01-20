@@ -71,13 +71,13 @@ pri_packer_setup_changelog:
 
 pri_packer_setup_builders_info:
   common:
-    iso_url: '{{pri_packer_setup_config.iso_url}}'
-    iso_checksum: '{{pri_packer_setup_config.iso_checksum}}'
+    iso_url: '{{ pri_packer_setup_config.iso_url }}'
+    iso_checksum: '{{ pri_packer_setup_config.iso_checksum }}'
     iso_checksum_type: md5
-    guest_additions_mode: '{{(opt_packer_setup_builder == "virtualbox")|ternary("attach", "disable")}}'
+    guest_additions_mode: '{{ (opt_packer_setup_builder == "virtualbox")|ternary("attach", "disable") }}'
     communicator: winrm
-    winrm_username: '{{opt_packer_setup_username}}'
-    winrm_password: '{{opt_packer_setup_password}}'
+    winrm_username: '{{ opt_packer_setup_username }}'
+    winrm_password: '{{ opt_packer_setup_password }}'
     winrm_port: '5985'
     winrm_timeout: '240m'
     shutdown_command: schtasks.exe /Run /TN "packer-shutdown"
@@ -88,27 +88,27 @@ pri_packer_setup_builders_info:
     -
       - modifyvm
       # need to double escape the Jinja2 {{.Name}} value so Ansible doesn't see it as a variable
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}} '}}{% endraw %}"
       - --memory
       - "2048"
     -
       - modifyvm
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --vram
       - "48"
     -
       - modifyvm
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --cpus
       - "2"
     -
       - modifyvm
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --natpf1
-      - winrm,tcp,127.0.0.1,{{pri_packer_setup_config.vb_forwarded_port}},,5985
+      - winrm,tcp,127.0.0.1,{{ pri_packer_setup_config.vb_forwarded_port }},,5985
     -
       - storagectl
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --name
       - Sata Controller
       - --add
@@ -117,7 +117,7 @@ pri_packer_setup_builders_info:
       - IntelAHCI
     -
       - storageattach
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --storagectl
       - Sata Controller
       - --port
@@ -127,10 +127,10 @@ pri_packer_setup_builders_info:
       - --type
       - dvddrive
       - --medium
-      - '{{man_packer_setup_host_type}}/secondary.iso'
+      - '{{ man_packer_setup_host_type }}/secondary.iso'
     -
       - storageattach
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --storagectl
       - Sata Controller
       - --port
@@ -140,33 +140,34 @@ pri_packer_setup_builders_info:
       - --type
       - dvddrive
       - --medium
-      - '{{man_packer_setup_host_type}}/virtio.iso'
+      - '{{ man_packer_setup_host_type }}/virtio.iso'
     vboxmanage_post:
     -
       - storagectl
-      - "{% raw %}{{'{{'}}.Name{{'}}'}}{% endraw %}"
+      - "{% raw %}{{ '{{' }}.Name{{ '}}' }}{% endraw %}"
       - --name
       - Sata Controller
       - --remove
-    guest_os_type: '{{pri_packer_setup_config.vb_guest_os_type}}'
-    headless: '{{opt_packer_setup_headless}}'
+    guest_os_type: '{{ pri_packer_setup_config.vb_guest_os_type }}'
+    headless: '{{ opt_packer_setup_headless }}'
   hyperv:
     type: hyperv-iso
     boot_command:
     - a<enter><wait>a<enter><wait>a<enter><wait>a<enter>
     boot_wait: 0s
     cpu: 2
-    generation: '{{pri_packer_setup_config.hv_generation|int}}'
+    generation: '{{ pri_packer_setup_config.hv_generation|int }}'
     ram_size: 2048
     secondary_iso_images: 
-    - '{{man_packer_setup_host_type}}/secondary.iso'
-    switch_name: '{{opt_packer_setup_hyperv_switch|default("packer-windoze")}}'
+    - '{{ man_packer_setup_host_type }}/secondary.iso'
+    switch_name: '{{ opt_packer_setup_hyperv_switch|default("packer-windoze") }}'
+    headless: '{{ opt_packer_setup_headless }}'
 
 pri_packer_setup_provisioners_info:
   common: []
   virtualbox:
   - type: shell-local
-    command: ansible-playbook main.yml -i {{man_packer_setup_host_type}}/hosts.ini -vv
+    command: ansible-playbook main.yml -i {{ man_packer_setup_host_type }}/hosts.ini -vv
   hyperv:
   # get the IP address of the host and store it as a file
   - type: powershell
@@ -175,38 +176,40 @@ pri_packer_setup_provisioners_info:
   # get the file that contains the IP address locally
   - type: file
     source: C:\temp\ip.txt
-    destination: '{{man_packer_setup_host_type}}/hyper-v-ip.txt'
+    destination: '{{ man_packer_setup_host_type }}/hyper-v-ip.txt'
     direction: download
   # replace the IP in the Ansible inventory with the real IP
   - type: shell-local
-    command: '{{man_packer_setup_host_type}}\configure-hyperv-network.ps1'
+    script: '{{ man_packer_setup_host_type }}\configure-hyperv-network.ps1'
     execute_command:
     - powershell.exe
     - -ExecutionPolicy
     - ByPass
     - -File
-    - '{% raw %}{{"{{"}}.Command{{"}}"}}{% endraw %}'
+    - '{% raw %}{{ "{{" }}.Script{{ "}}" }}{% endraw %}'
   - type: shell-local
-    command: ansible-playbook main.yml -i {{man_packer_setup_host_type}}/hosts.ini -vv
+    # Packer creates a tmp script for command which won't work for bash.exe -ic, we set the actual command we want to
+    # use in execute_command and have a dummy value here
+    command: dummy
     execute_command:
     - bash.exe
     - -ic
-    - '{% raw %}{{"{{"}}.Command{{"}}"}}{% endraw %}'
+    - ansible-playbook main.yml -i {{ man_packer_setup_host_type }}/hosts.ini -vv
 
 pri_packer_setup_post_processors_info:
   common:
     type: vagrant
-    output: "{{man_packer_setup_host_type}}/{{opt_packer_setup_builder}}.box"
-    vagrantfile_template: "{{man_packer_setup_host_type}}/vagrantfile.template"
+    output: "{{ man_packer_setup_host_type }}/{{ opt_packer_setup_builder }}.box"
+    vagrantfile_template: "{{ man_packer_setup_host_type }}/vagrantfile.template"
   virtualbox: {}
   hyperv: {}
 
 pri_packer_setup_json:
   builders:
-  - '{{pri_packer_setup_builders}}'
-  provisioners: '{{pri_packer_setup_provisioners}}'
+  - '{{ pri_packer_setup_builders }}'
+  provisioners: '{{ pri_packer_setup_provisioners }}'
   post-processors:
-  - '{{pri_packer_setup_post_processors}}'
+  - '{{ pri_packer_setup_post_processors }}'
 
 # host settings like url's, checksums, vbox types, etc
 #   iso_url: The URL of the evaluation ISO

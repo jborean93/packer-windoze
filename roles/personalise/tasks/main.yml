@@ -130,7 +130,7 @@
     state: present
   when:
   - man_personalize_choco_packages|count > 0
-  - item
+  - item != ''
   loop: '{{ man_personalize_choco_packages }}'
   become: yes
   vars:  # run with become as we aren't sure what packages the user has specified

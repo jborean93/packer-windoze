@@ -6,7 +6,7 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
-### v0.6.0 - TBD
+### v0.6.0 - 2019-01-20
 
 * Fix logic when setting the `LocalAccountTokenFilterPolicy` value when setting up the WinRM listener
 * Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure
