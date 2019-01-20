@@ -7,7 +7,6 @@ install:
 - pip install pip setuptools
 - pip install -U pip setuptools
 - pip install ansible-lint
-- ansible-galaxy install -r requirements.yml -p roles
 
 script:
 # show the ansible-lint version
