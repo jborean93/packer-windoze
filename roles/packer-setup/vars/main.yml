@@ -390,15 +390,22 @@ pri_packer_setup_host_config:
     # https://www.catalog.update.microsoft.com/home.aspx and search for the
     # following terms, put the download link below;
     #
+    # Servicing Stack Updates sometimes need to be installed *before* the cumulative update,
+    # otherwise the cumulative update fails.
+    #
     #     * Update for Windows Server 2016 for x64-based Systems - Critical Updates
     #       https://www.catalog.update.microsoft.com/Search.aspx?q=Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Critical%20Updates
+    #     * Update for Windows Server 2016 for x64-based Systems - Servicing Stack Updates
+    #       https://www.catalog.update.microsoft.com/Search.aspx?q=Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Servicing%20Stack%20Updates
     #     * Cumulative Update for Windows Server 2016 for x64-based Systems - Security Updates
     #       https://www.catalog.update.microsoft.com/Search.aspx?q=Cumulative%20Update%20for%20Windows%20Server%202016%20for%20x64-based%20Systems%20-%20Security%20Updates
     bootstrap_files:
-    - name: KB4456655
-      url: http://download.windowsupdate.com/d/msdownload/update/software/crup/2018/09/windows10.0-kb4456655-x64_fca3f0c885da48efc6f9699b0c1eaf424e779434.msu
-    - name: KB4480961
-      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2019/01/windows10.0-kb4480961-x64_ada63f8d66b2c9994e03c3f5bffe56aff77edeb6.msu
+    - name: KB4132216
+      url: http://download.windowsupdate.com/c/msdownload/update/software/crup/2018/05/windows10.0-kb4132216-x64_9cbeb1024166bdeceff90cd564714e1dcd01296e.msu
+    - name: KB4521858
+      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2019/09/windows10.0-kb4521858-x64_4660e9135b9de2ec006aee76499588d729fbbc60.msu
+    - name: KB4519998
+      url: http://download.windowsupdate.com/d/msdownload/update/software/secu/2019/10/windows10.0-kb4519998-x64_b62b591fe9a727817b9a7db57a135bd95a5cd423.msu
   '1709':
     box_tag: WindowsServer1709
 
