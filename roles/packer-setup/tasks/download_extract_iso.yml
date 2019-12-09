@@ -22,7 +22,7 @@
   changed_when: false
   register: pri_packer_setup_unrar_file
 
-- name: extract ISO fro self extracting exe file
+- name: extract ISO from self extracting exe file
   command: unrar e {{ man_packer_setup_host_type }}/tmp-iso.exe {{ man_packer_setup_host_type }}/
   args:
     creates: '{{ man_packer_setup_host_type }}/{{ pri_packer_setup_unrar_file.stdout }}'
