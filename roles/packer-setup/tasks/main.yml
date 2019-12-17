@@ -38,7 +38,7 @@
 
 - name: download Virtio ISO for VirtualBox build
   get_url:
-    url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso
+    url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.171-1/virtio-win-0.1.171.iso
     dest: '{{ man_packer_setup_host_type }}/virtio.iso'
   when: opt_packer_setup_builder in ['virtualbox', 'qemu']
 
