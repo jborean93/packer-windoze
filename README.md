@@ -28,6 +28,7 @@ To use the scripts in this repo you will need the following;
 * [Packer](https://www.packer.io/docs/install/index.html) >= 1.0.0, 1.2.4 is required for Hyper-V with Server 2008 R2 support
 * [Ansible](https://github.com/ansible/ansible) >= 2.7.0
 * `mkisofs` for Windows this needs to be installed in WSL where Ansible is located
+* [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/) to retrieve the latest Windows Updates for the build
 
 One of the following hypervisers as defined by `opt_packer_setup_builder`:
 

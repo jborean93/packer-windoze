@@ -18,8 +18,6 @@
       - man_skip_feature_removal is defined
       - man_personalize_choco_packages is defined
 
-  - wait_for_connection:
-
   - name: make sure the WinRM service is set to auto
     win_service:
       name: winrm
