@@ -6,13 +6,40 @@
     path: '{{ man_packer_setup_host_type }}/iso'
     state: directory
 
-# need to set pri_packer_setup_bootstrap_drive
+- name: download latest Microsoft code verification root certificate for older hosts
+  get_url:
+    url: https://www.microsoft.com/pki/certs/MicrosoftCodeVerifRoot.crt
+    dest: '{{ man_packer_setup_host_type }}/iso/MicrosoftCodeVerifRoot.crt'
+
+# Due to how the hosts are setup the drive names differ per builder
+- name: get a list of drive names for secondary.iso for each build type
+  set_fact:
+    pri_packer_setup_bootstrap_drives:
+      qemu: D
+      hyperv: E
+      virtualbox: F
+
+- name: set initial boostrap files fact
+  set_fact:
+    pri_packer_setup_bootstrap_files: []
+
+# Process the bootstrap files here so the update lookups only run once.
+- name: set fact of finalised bootstrap files to download/install
+  set_fact:
+    pri_packer_setup_bootstrap_files: '{{ pri_packer_setup_bootstrap_files + [
+        item if item.type | default("") != "update" else
+        (lookup("windows_update", item.name, architecture=pri_packer_setup_config.architecture, product=item.product,
+                sort="last_updated", wantlist=True)[0] |
+                  parse_update(filename_pattern=item.filename_pattern | default(None)))
+      ] }}'
+  with_items: '{{ pri_packer_setup_config.bootstrap_files }}'
+
 - name: template the required files
   template:
     dest: '{{ man_packer_setup_host_type }}/iso/{{ item }}'
     src: '{{ item }}.j2'
   vars:
-    pri_packer_setup_bootstrap_drive: '{{ (opt_packer_setup_builder == "virtualbox")|ternary("f", "e") }}'
+    pri_packer_setup_bootstrap_drive: '{{ pri_packer_setup_bootstrap_drives[opt_packer_setup_builder] }}'
   register: pri_packer_setup_template_res
   with_items:
   - bootstrap.ps1
@@ -23,8 +50,9 @@
     dest: '{{ man_packer_setup_host_type }}/iso/{{ item.file|default() }}'
     url: '{{ item.url }}'
     force: no
+    checksum: '{{ item.checksum | default(omit) }}'
   register: pri_packer_setup_bootstrap_download_res
-  with_items: '{{ pri_packer_setup_config.bootstrap_files }}'
+  with_items: '{{ pri_packer_setup_bootstrap_files }}'
 
 - name: create the secondary ISO file
   command: mkisofs -joliet-long -lU -o {{ man_packer_setup_host_type }}/secondary.iso {{ man_packer_setup_host_type }}/iso

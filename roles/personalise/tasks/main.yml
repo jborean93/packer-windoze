@@ -9,7 +9,7 @@
       type: dword
       state: present
     register: pri_personalise_tls_config
-    when: not (man_is_longhorn and item.type == "Server") # Server 2008 Server impl does not work, only apply the client configuration
+    #when: not (man_is_longhorn and item.type == "Server") # Server 2008 Server impl does not work, only apply the client configuration
     loop:
     - type: Server
       property: Enabled
@@ -126,12 +126,12 @@
 
 - name: install set Chocolatey packages
   win_chocolatey:
-    name: '{{ item }}'  # TODO: set list directly here when 2.7 is the min version
+    name: '{{ man_personalize_choco_packages }}'
+    ignore_checksums: yes
     state: present
   when:
   - man_personalize_choco_packages|count > 0
-  - item != ''
-  loop: '{{ man_personalize_choco_packages }}'
+  - man_personalize_choco_packages[0] != ''
   become: yes
   vars:  # run with become as we aren't sure what packages the user has specified
     ansible_become_user: '{{ ansible_user }}'
@@ -140,3 +140,7 @@
 - name: install the VirtualBox Guest Additions
   include_tasks: virtualbox.yml
   when: man_provider == 'virtualbox'
+
+- name: install the QEMU Guest Additions
+  include_tasks: qemu.yml
+  when: man_provider == 'qemu'

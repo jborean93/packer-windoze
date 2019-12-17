@@ -1,0 +1,65 @@
+---
+- name: install QEMU Guest Additions from virtio disk
+  win_package:
+    path: E:\guest-agent\qemu-ga-{{ (man_host_architecture == 'x86') | ternary('i386', 'x86_64') }}.msi
+    state: present
+  register: pri_personalise_ga_res
+
+- name: reboot host after QEMU Guest Additions install
+  win_reboot:
+  when: pri_personalise_ga_res.reboot_required
+
+- name: create directory for Balloon service executable
+  win_file:
+    path: C:\Program Files\QEMU_Balloon
+    state: directory
+
+- name: copy the Balloon memory service executable to the host
+  win_copy:
+    src: E:\Balloon\{{ man_driver_host_string }}\{{ man_host_architecture }}\blnsvr.exe
+    dest: C:\Program Files\QEMU_Balloon\blnsvr.exe
+    remote_src: yes
+
+- name: create Balloon memory service
+  win_service:
+    name: BalloonService
+    display_name: Balloon Service
+    path: '"C:\Program Files\QEMU_Balloon\blnsvr.exe"'
+    start_mode: auto
+    state: started
+    username: LocalSystem
+
+# https://bugzilla.redhat.com/show_bug.cgi?id=1377155
+- name: fix up ACPI0010 unknown device settings for Server 2016
+  when: man_host_type == '2016'
+  block:
+  - name: get keys under DriverPackages
+    win_reg_stat:
+      path: HKLM:\SYSTEM\DriverDatabase\DriverPackages
+    register: pri_personalise_qemu_hid_keys
+
+  - name: get full key name for the hidinterrupt.inf package
+    set_fact:
+      pri_personalise_qemu_hid: '{{ (pri_personalise_qemu_hid_keys.sub_keys | select("match", "hidinterrupt\.inf_.*") | list)[0] }}'
+
+  - name: remove bad ACPI0010 entry in driver packages
+    win_regedit:
+      path: HKLM:\SYSTEM\DriverDatabase\DriverPackages\{{ pri_personalise_qemu_hid }}\Descriptors\ACPI\ACPI0010
+      state: absent
+      delete_key: yes
+    register: pri_personalise_qemu_key1
+    become: yes
+    become_user: SYSTEM
+
+  - name: remove bad ACPI0010 hidinterrup entry
+    win_regedit:
+      path: HKLM:\SYSTEM\DriverDatabase\DeviceIds\ACPI\ACPI0010
+      name: hidinterrupt.inf
+      state: absent
+    register: pri_personalise_qemu_key2
+    become: yes
+    become_user: SYSTEM
+
+  - name: remove broken device and rescan for hardware changes
+    script: remove_device.ps1
+    when: pri_personalise_qemu_key1 is changed or pri_personalise_qemu_key2 is changed

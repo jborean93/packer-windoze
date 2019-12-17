@@ -29,3 +29,6 @@ roles/jborean93.*
 
 # MacOS files
 .DS_Store
+
+# Various IDEs
+.idea/

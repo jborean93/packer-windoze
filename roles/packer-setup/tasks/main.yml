@@ -40,7 +40,7 @@
   get_url:
     url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso
     dest: '{{ man_packer_setup_host_type }}/virtio.iso'
-  when: opt_packer_setup_builder == 'virtualbox'
+  when: opt_packer_setup_builder in ['virtualbox', 'qemu']
 
 - name: create Hyper-V External Network switch
   block:

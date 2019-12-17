@@ -9,6 +9,16 @@
     </servicing>
 {% endif %}
     <settings pass="windowsPE">
+{% if opt_packer_setup_builder == 'qemu' %}
+        <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-pnpcustomizationswinpe -->
+        <component xmlns:wcm="https://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+            <DriverPaths>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="1">
+                    <Path>E:\viostor\{{pri_packer_setup_config.driver_host_string}}\{{pri_packer_setup_config.architecture}}</Path> 
+                </PathAndCredentials>
+            </DriverPaths>
+        </component>
+{% endif %}
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-international-core-winpe -->
         <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <SetupUILanguage>
@@ -47,7 +57,7 @@
                         <CreatePartition wcm:action="add">
                             <Order>1</Order>
                             <Size>300</Size>
-							<Type>Primary</Type>
+                            <Type>Primary</Type>
                         </CreatePartition>
                         <CreatePartition wcm:action="add">
                             <Order>2</Order>
@@ -62,7 +72,7 @@
                         <CreatePartition wcm:action="add">
                             <Order>4</Order>
                             <Extend>true</Extend>
-							<Type>Primary</Type>
+                            <Type>Primary</Type>
                         </CreatePartition>
                     </CreatePartitions>
                     <ModifyPartitions>
@@ -70,7 +80,7 @@
                             <Format>NTFS</Format>
                             <Label>WINRE</Label>
                             <Order>1</Order>
-							<PartitionID>1</PartitionID>
+                            <PartitionID>1</PartitionID>
                             <TypeID>de94bba4-06d1-4d40-a16a-bfd50179d6ac</TypeID>
                         </ModifyPartition>
                         <ModifyPartition wcm:action="add">
@@ -239,10 +249,12 @@
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force"</CommandLine>
                     <Order>1</Order>
+                    <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File {{pri_packer_setup_bootstrap_drive}}:\bootstrap.ps1</CommandLine>
                     <Order>2</Order>
+                    <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
 {% endif %}
             </FirstLogonCommands>

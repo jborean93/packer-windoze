@@ -5,12 +5,15 @@ packer-host  ansible_host=127.0.0.1
 ansible_user={{opt_packer_setup_username}}
 ansible_password={{opt_packer_setup_password}}
 ansible_port={{pri_packer_setup_ansible_port}}
-ansible_connection=winrm
-ansible_winrm_scheme=http
+ansible_connection=psrp
+ansible_psrp_auth=basic
+ansible_psrp_protocol=http
+ansible_psrp_message_encryption=never
 ansible_become_method=runas
 ansible_become_user=SYSTEM
 
 man_provider={{opt_packer_setup_builder}}
+man_driver_host_string={{pri_packer_setup_config.driver_host_string}}
 man_host_type="{{man_packer_setup_host_type}}"
 man_host_architecture={{pri_packer_setup_config.architecture}}
 man_is_longhorn={{pri_packer_setup_config.answer_longhorn}}
