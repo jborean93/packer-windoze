@@ -170,11 +170,24 @@ $bootstrap_actions = @(
         path = (Get-VirtIODriverPath -Name pvpanic)
         action = "driver"
     },
-    {% if man_packer_setup_host_type not in ['2008-x86', '2008-x64'] %}
+    {% if man_packer_setup_host_type in ['2008-x86', '2008-x64'] %}
+{# This is only relevant for 2008 #}
+    @{
+        name = "Red Hat Virtio SMBBus Driver"
+        path = (Get-VirtIODriverPath -Name smbus)
+        action = "driver"
+    },
+    {% else %}
 {# There is no relevant graphics driver for 2008 #}
     @{
         name = "Red Hat Virtio Graphics Driver"
         path = (Get-VirtIODriverPath -Name {{ (man_packer_setup_host_type == '2008r2') | ternary("qxl", "qxldod") }})
+        action = "driver"
+    },
+{# There is no driver for vioinput for 2008 #}
+    @{
+        name = "Red Hat Virtio VIOInput driver"
+        path = (Get-VirtIODriverPath -Name vioinput)
         action = "driver"
     },
 {# Server 2008 cannot install SHA256 signed drivers non-interactively #}

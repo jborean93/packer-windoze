@@ -9,6 +9,7 @@ contains a list of changes that each incorporate.
 ### v0.7.0 - TBD
 
 * Added `qemu/libvirt` boxes and default template to use VirtIO drivers for better performance
+* Pin the VirtIO driver version to a specific version that can be manually updated across version. Currently at the latest stable version of `0.1.171`.
 * Updated OpenSSH version to [v8.0.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.0.0.0p1-Beta)
 * Raised minimum Ansible version to `2.7.0`.
 * Swapped the connection plugin from `winrm` to `psrp` for faster builds. The [pypsrp](https://pypi.org/project/pypsrp/) Python library needs to be installed.
