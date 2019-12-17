@@ -7,6 +7,11 @@ pri_packer_setup_changelog:
   - Updated OpenSSH version to [v8.0.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.0.0.0p1-Beta)
   - Raised minimum Ansible version to `2.7.0`.
   - Swapped the connection plugin from `winrm` to `psrp` for faster builds. The [pypsrp](https://pypi.org/project/pypsrp/) Python library needs to be installed.
+  host_specific_changes:
+    2008-x86:
+    - Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
+    2008-x64:
+    - Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
 - version: '0.6.0'
   date: 2019-01-20
   changes:
@@ -14,7 +19,7 @@ pri_packer_setup_changelog:
   - Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure
   - Moved away from custom role to install the Win32-OpenSSH components, now using the [jborean93.win_openssh](https://galaxy.ansible.com/jborean93/win_openssh) role
   - Updated OpenSSH version [7.9.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.9.0.0p1-Beta)
-  - Installed the [virtio-network](httansible_winrm_scheme=httpps://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
+  - Installed the [virtio-network](https://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
   host_specific_changes:
     2016:
     - Changed the default Windows Explorer window to show `This PC` instead of `Quick access`
@@ -427,8 +432,6 @@ pri_packer_setup_host_config:
     answer_longhorn: no
     driver_host_string: 2k12
     bootstrap_files:
-    #- name: TiWorker Slow Performance Fix
-    #  url: https://download.microsoft.com/download/D/D/C/DDC353A0-A56D-48E8-B2C0-97615C503145/Windows8-RT-KB2771431-x64.msu
     - name: WMFv3 Memory Hotfix
       action: install-zip
       zip_file_pattern: '*KB2842230*.msu'

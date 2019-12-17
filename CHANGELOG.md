@@ -12,6 +12,10 @@ contains a list of changes that each incorporate.
 * Updated OpenSSH version to [v8.0.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.0.0.0p1-Beta)
 * Raised minimum Ansible version to `2.7.0`.
 * Swapped the connection plugin from `winrm` to `psrp` for faster builds. The [pypsrp](https://pypi.org/project/pypsrp/) Python library needs to be installed.
+* 2008-x86
+    * Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
+* 2008-x64
+    * Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
 
 ### v0.6.0 - 2019-01-20
 
@@ -19,7 +23,7 @@ contains a list of changes that each incorporate.
 * Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure
 * Moved away from custom role to install the Win32-OpenSSH components, now using the [jborean93.win_openssh](https://galaxy.ansible.com/jborean93/win_openssh) role
 * Updated OpenSSH version [7.9.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.9.0.0p1-Beta)
-* Installed the [virtio-network](httansible_winrm_scheme=httpps://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
+* Installed the [virtio-network](https://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
 * 2016
     * Changed the default Windows Explorer window to show `This PC` instead of `Quick access`
 

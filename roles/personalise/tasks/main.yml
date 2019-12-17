@@ -9,7 +9,6 @@
       type: dword
       state: present
     register: pri_personalise_tls_config
-    #when: not (man_is_longhorn and item.type == "Server") # Server 2008 Server impl does not work, only apply the client configuration
     loop:
     - type: Server
       property: Enabled
