@@ -6,6 +6,18 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v0.7.0 - 2019-12-20
+
+* Added `qemu/libvirt` boxes and default template to use VirtIO drivers for better performance
+* Pin the VirtIO driver version to a specific version that can be manually updated across version. Currently at the latest stable version of `0.1.171`.
+* Updated OpenSSH version to [v8.0.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.0.0.0p1-Beta)
+* Raised minimum Ansible version to `2.7.0`.
+* Swapped the connection plugin from `winrm` to `psrp` for faster builds. The [pypsrp](https://pypi.org/project/pypsrp/) Python library needs to be installed.
+* 2008-x86
+    * Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
+* 2008-x64
+    * Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
+
 ### v0.6.0 - 2019-01-20
 
 * Fix logic when setting the `LocalAccountTokenFilterPolicy` value when setting up the WinRM listener

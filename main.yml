@@ -10,6 +10,7 @@
       - ansible_become_method == "runas"
       - ansible_become_user is defined
       - man_provider is defined
+      - man_driver_host_string is defined
       - man_host_type is defined
       - man_host_architecture is defined
       - man_is_longhorn is defined
@@ -28,7 +29,7 @@
   - role: jborean93.win_openssh
     opt_openssh_firewall_profiles: domain,private,public
     opt_openssh_skip_start: True
-    opt_openssh_version: v7.9.0.0p1-Beta
+    opt_openssh_version: v8.0.0.0p1-Beta
     when: not man_is_longhorn
   - cleanup-winsxs
   - cleanup-features

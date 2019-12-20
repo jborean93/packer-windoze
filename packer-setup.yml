@@ -9,21 +9,21 @@
     opt_packer_setup_builder: virtualbox
 
   pre_tasks:
-  - name: check that the Ansible version is at least 2.5
+  - name: check that the Ansible version is at least 2.7
     assert:
       that:
       - ansible_version.major >= 2
-      - ansible_version.minor >= 5
-      msg: packer-windoze requires Ansible 2.5 or newer to run, please upgrade or checkout devel before running
+      - ansible_version.minor >= 7
+      msg: packer-windoze requires Ansible 2.7 or newer to run, please upgrade or checkout devel before running
 
   - name: check that the provider is valid
     assert:
       that:
-      - opt_packer_setup_builder in ['hyperv', 'virtualbox']
-      msg: packer-windoze only supports the hyperv and virtualbox provider
+      - opt_packer_setup_builder in ['hyperv', 'qemu', 'virtualbox']
+      msg: packer-windoze only supports the hyperv, qemu, and virtualbox provider
 
-  - name: check that pywinrm is installed
-    command: python -c "import winrm"
+  - name: check that pypsrp is installed
+    command: python -c "import pypsrp"
     changed_when: False
 
   roles:

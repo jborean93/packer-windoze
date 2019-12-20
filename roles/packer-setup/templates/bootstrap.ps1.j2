@@ -1,11 +1,13 @@
 $ErrorActionPreference = 'Stop'
-$tmp_dir = "$env:SystemDrive\temp"
+$tmp_dir = $env:TEMP
 $script_dir = Split-Path -Path $($script:MyInvocation.MyCommand.Path) -Parent
 
 trap {
     $msg = "Unhandled exception`r`n$($_ | Out-String)"
     Write-Log -message $msg -level "ERROR"
-    Write-Error -ErrorRecord $_
+    Write-Error -ErrorRecord $_ -ErrorAction Continue
+    Write-Host -NoNewLine "Press any key to continue..."
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 }
 
 Function Write-Log($message, $level="INFO") {
@@ -78,22 +80,44 @@ Function Extract-Zip($zip, $dest) {
     }
 }
 
-Function Get-NetKVMDriverPath {
-    $drive = (Get-PSDrive -PSProvider FileSystem).Name | Where-Object {
-        $drive = $_
-        # Annoying hack to run with PSv1, Test-Path complain if a null value is
-        # in the string, and $_ isn't valid in PSv1. We don't run this cmdlet
-        # in this version so this is just to get the whole script running
-        if ($null -eq $drive) {
-            $drive = "C"
+Function Get-VirtIODriverPath($Name) {
+    # For PSv1 we just default to the standard drive, we don't actually install the drive on this version.
+    $drive = $env:SystemDrive + "\"
+    foreach ($file_system in (Get-PSDrive -PSProvider FileSystem)) {
+        if (Test-Path -LiteralPath "$($file_system.Root)$Name") {
+            $drive = $file_system.Root
+            break
         }
-        Test-Path -LiteralPath "$($drive):\NetKVM"
     }
 
     $host_key = "{{ pri_packer_setup_config.driver_host_string }}"
     $architecture = $env:PROCESSOR_ARCHITECTURE
-    $inf_path = "$($drive):\NetKVM\$host_key\$architecture\netkvm.inf"
+    $inf_path = (Get-ChildItem -LiteralPath "$drive\$Name\$host_key\$architecture" -Filter "*.inf").FullName
     return $inf_path
+}
+
+Function Import-Certificate($cert, $store) {
+    $installed_thumbprints = (Get-ChildItem -LiteralPath "Cert:\LocalMachine\$store").Thumbprint
+    if ($null -eq $installed_thumbprints) {
+        # The 1st arg of IndexOf cannot be $null so this is a sanity check for that.
+        $installed_thumbprints = @()
+    }
+
+    # Cannot use -in or -notin as PSv1 (Server 2008) will fail to parse the script
+    if (($null -ne $cert.Thumbprint) -and ([System.Array]::IndexOf($installed_thumbprints, $cert.Thumbprint) -eq -1)) {
+        Write-Log -message "Certificate $($cert.Thumbprint) not in $store store"
+        $store_name = [System.Security.Cryptography.X509Certificates.StoreName]"$store"
+        $store_location = [System.Security.Cryptography.X509Certificates.Storelocation]::LocalMachine
+
+        $store = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $store_name, $store_location
+        $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+        try {
+            $store.Add($cert)
+        } finally {
+            # Only .NET 4.6.2 has X509 as an IDisposable, use Close for backwards compatibility
+            $store.Close()
+        }
+    }
 }
 
 $action = $args[0]
@@ -103,7 +127,7 @@ if (-not (Test-Path -Path $tmp_dir)) {
 Write-Log -message "starting bootstrap.ps1 with action '$action'"
 
 $bootstrap_actions = @(
-{% for action in pri_packer_setup_config.bootstrap_files %}
+{% for action in pri_packer_setup_bootstrap_files %}
     @{
         name = "{{action.name}}"
         action = "{{action.action|default("install")}}"
@@ -113,12 +137,67 @@ $bootstrap_actions = @(
         arguments = "{{action.arguments|default("/quiet /norestart")}}"
     },
 {% endfor %}
-{% if opt_packer_setup_builder == 'virtualbox' %}
+{% if opt_packer_setup_builder in ['qemu', 'virtualbox'] %}
     @{
         name = "Red Hat Virtio Network Driver"
-        path = Get-NetKVMDriverPath
+        path = (Get-VirtIODriverPath -Name NetKVM)
         action = "driver"
     },
+{% endif %}
+{% if opt_packer_setup_builder == 'qemu' %}
+    @{
+        name = "Red Hat Virtio SCSI driver"
+        path = (Get-VirtIODriverPath -Name vioscsi)
+        action = "driver"
+    },
+    @{
+        name = "Red Hat Virtio RNG driver"
+        path = (Get-VirtIODriverPath -Name viorng)
+        action = "driver"
+    },
+    @{
+        name = "Red Hat Virtio serial driver"
+        path = (Get-VirtIODriverPath -Name vioserial)
+        action = "driver"
+    },
+    @{
+        name = "Red Hat Virtio Memory Memory Balloon Driver"
+        path = (Get-VirtIODriverPath -Name Balloon)
+        action = "driver"
+    },
+    @{
+        name = "Red Hat Virtio pvpanic driver"
+        path = (Get-VirtIODriverPath -Name pvpanic)
+        action = "driver"
+    },
+    {% if man_packer_setup_host_type not in ['2008-x86', '2008-x64'] %}
+{# There is no relevant graphics driver for 2008 #}
+    @{
+        name = "Red Hat Virtio Graphics Driver"
+        path = (Get-VirtIODriverPath -Name {{ (man_packer_setup_host_type == '2008r2') | ternary("qxl", "qxldod") }})
+        action = "driver"
+    },
+{# There is no driver for vioinput for 2008 #}
+    @{
+        name = "Red Hat Virtio VIOInput driver"
+        path = (Get-VirtIODriverPath -Name vioinput)
+        action = "driver"
+    },
+{# Server 2008 cannot install SHA256 signed drivers non-interactively #}
+    @{
+        name = "Red Hat Virtio PCI serial"
+        path = (Get-VirtIODriverPath -Name qemupciserial)
+        action = "driver"
+    },
+        {% if man_packer_setup_host_type not in ['2008r2', '2012', '2012r2'] %}
+{# qemufwcfg only valid for 2016+ #}
+    @{
+        name = "Red Hat Virtio Firmware Config Driver"
+        path = (Get-VirtIODriverPath -Name qemufwcfg)
+        action = "driver"
+    },
+        {% endif %}
+    {% endif %}
 {% endif %}
     @{
         name = "Configure WinRM"
@@ -212,29 +291,15 @@ namespace PackerWindoze
 }
 '@
 
-            $sys_path = Get-ChildItem -Path (Split-Path -Path $current_action.path -Parent) -Filter "*.sys" -File
-            $driver_cert = (Get-AuthenticodeSignature -LiteralPath $sys_path.FullName).SignerCertificate
+            # Older hosts may not have the root Microsoft cert that has signed the VirtIO drivers installed. We
+            # manually install it so we can install the driver silently without user interaction.
+            $root_cert_path = "$script_dir\MicrosoftCodeVerifRoot.crt"
+            $root_cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $root_cert_path
+            Import-Certificate -cert $root_cert -store "Root"
 
-            $trusted_certs = (Get-ChildItem -Path Cert:\LocalMachine\TrustedPublisher).Thumbprint
-            if ($null -eq $trusted_certs) {
-                # The 1st arg of IndexOf cannot be $null so this is a sanity check for that
-                $trusted_certs = @()
-            }
-            # Cannot use -in or -notin as PSv1 (Server 2008) will fail to parse the script
-            if (($null -ne $driver_cert.Thumbprint) -and ([System.Array]::IndexOf($trusted_certs, $driver_cert.Thumbprint) -eq -1)) {
-                Write-Log -message "Certificate $($driver_cert.Thumbprint) not in TrustedPublisher store"
-                $store_name = [System.Security.Cryptography.X509Certificates.StoreName]::TrustedPublisher
-                $store_location = [System.Security.Cryptography.X509Certificates.Storelocation]::LocalMachine
-
-                $store = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $store_name, $store_location
-                $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
-                try {
-                    $store.Add($driver_cert)
-                } finally {
-                    # Only .NET 4.6.2 has X509 as an IDisposable, use Close for backwards compatibility
-                    $store.Close()
-                }
-            }
+            $cat_path = Get-ChildItem -Path (Split-Path -Path $current_action.path -Parent) -Filter "*.cat" -File
+            $driver_cert = (Get-AuthenticodeSignature -LiteralPath $cat_path.FullName).SignerCertificate
+            Import-Certificate -cert $driver_cert -store "TrustedPublisher"
 
             $needs_reboot = $false
             $res = [PackerWindoze.NativeMethods]::DiInstallDriverW([IntPtr]::Zero, $current_action.path, 0, [ref]$needs_reboot)
@@ -262,11 +327,14 @@ namespace PackerWindoze
                 try {
                     Start-Service -Name winrm
                 } catch {
-                    $error_message = "failed to start WinRM service required by Ansible"
+                    $error_message = "failed to start the WinRM service required by Ansible"
                     Write-Log -message $error_message -level "ERROR"
                     throw $error_message
                 }
             }
+
+            Write-Log -message "configuring PSRemoting endpoints"
+            Enable-PSRemoting -Force -SkipNetworkProfileCheck
 
             Write-Log -message "enabling RDP"
             $rdp_wmi = Get-CimInstance -ClassName Win32_TerminalServiceSetting -Namespace root\CIMV2\TerminalServices

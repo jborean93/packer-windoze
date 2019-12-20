@@ -24,12 +24,17 @@ together more.
 
 To use the scripts in this repo you will need the following;
 
-* [pywinrm](https://pypi.org/project/pywinrm)
+* [pypsrp](https://pypi.org/project/pypsrp/)
 * [Packer](https://www.packer.io/docs/install/index.html) >= 1.0.0, 1.2.4 is required for Hyper-V with Server 2008 R2 support
+* [Ansible](https://github.com/ansible/ansible) >= 2.7.0
+* `mkisofs` for Windows this needs to be installed in WSL where Ansible is located
+* [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/) to retrieve the latest Windows Updates for the build
+
+One of the following hypervisers as defined by `opt_packer_setup_builder`:
+
 * [VirtualBox](https://www.virtualbox.org/wiki/Downloads) >= 5.1.12
 * [Hyper-V](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-on-windows-server) - Server 2008 is not supported with Hyper-V
-* [Ansible](https://github.com/ansible/ansible) >= 2.5.1
-* `mkisofs` for Windows this needs to be installed in WSL where Ansible is located
+* [QEMU](https://www.qemu.org/)
 
 When setting `man_packer_setup_host_type: 2008-x64`, Ansible will extract the
 evaluation ISO from a self extracting archive. This requires the `unrar`
@@ -145,7 +150,9 @@ facing images
 The following are optional parameters set using the `-e` argument and can
 change the way Packer builds the images in the next step;
 
-* `opt_packer_setup_builder`: The Packer builder to use, defaults to `virtualbox` but can be `hyperv` when running on Windows.
+* `opt_packer_setup_builder`: The Packer builder to use, defaults to `virtualbox` but can `qemu`, or `hyperv` when running on Windows.
+* `opt_packer_setup_disk_size_mib`: The size in mebibytes' (`MiB`) of the OS disk to create (default: `40960`).
+* `opt_packer_setup_headless`: Used for debugging, will display the Windows console during the build if set to `False` (default: `True`)
 * `opt_packer_setup_iso_path`: The local path to the install Windows ISO, this means packer will use this instead of downloading the pre-set evaluation ISO from the internet.
 * `opt_packer_setup_iso_wim_label`: The WIM image name to use when installing Windows from an ISO, the process defaults to the Standard edition if not set.
 * `opt_packer_setup_username`: (Default: `vagrant`) The name of the user to create in the provisioning process, this is the only user that will available in the image created as the builtin Administrator account is disabled.

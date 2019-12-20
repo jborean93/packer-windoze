@@ -1,4 +1,0 @@
----
-- name: run Windows 10 cleanup if host is Windows 10
-  include_tasks: cleanup-win10.yml
-  when: man_host_type == "10-x86" or man_host_type == "10-x64"
