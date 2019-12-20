@@ -6,7 +6,7 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
-### v0.7.0 - TBD
+### v0.7.0 - 2019-12-20
 
 * Added `qemu/libvirt` boxes and default template to use VirtIO drivers for better performance
 * Pin the VirtIO driver version to a specific version that can be manually updated across version. Currently at the latest stable version of `0.1.171`.

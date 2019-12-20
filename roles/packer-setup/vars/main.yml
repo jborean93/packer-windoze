@@ -1,7 +1,7 @@
 # this creates the changelog in the description for the Vagrant box
 pri_packer_setup_changelog:
 - version: '0.7.0'
-  date: TBD
+  date: 2019-12-20
   changes:
   - Added `qemu/libvirt` boxes and default template to use VirtIO drivers for better performance
   - Pin the VirtIO driver version to a specific version that can be manually updated across version. Currently at the latest stable version of `0.1.171`.
