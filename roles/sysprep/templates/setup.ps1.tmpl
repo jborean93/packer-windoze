@@ -27,11 +27,9 @@ switch($action) {
         Write-Log -message "Disabling the password expiration of the {{ansible_user}} account"
         &cmd.exe @("/c", "WMIC", "USERACCOUNT", "WHERE", "Name='{{ansible_user}}'", "SET", "PasswordExpires=FALSE")
 
-{% if man_is_longhorn == False %}
         Write-Log -message "Setting sshd services to auto start"
         Set-Service -Name sshd -StartupType Automatic
         Set-Service -Name ssh-agent -StartupType Automatic
-{% endif %}
 
         Write-Log -message "Rearming the host using slmgr.vbs /rearm"
         &C:\Windows\System32\cscript.exe C:\Windows\System32\slmgr.vbs /rearm

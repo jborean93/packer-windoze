@@ -1,33 +1,4 @@
 ---
-- name: install and enable TLSv1.2 for Server 2008 and 2008 R2
-  block:
-  - name: enable TLSv1.2 support for Server 2008 and 2008 R2
-    win_regedit:
-      path: HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.2\{{ item.type }}
-      name: '{{ item.property }}'
-      data: '{{ item.value }}'
-      type: dword
-      state: present
-    register: pri_personalise_tls_config
-    loop:
-    - type: Server
-      property: Enabled
-      value: 1
-    - type: Server
-      property: DisabledByDefault
-      value: 0
-    - type: Client
-      property: Enabled
-      value: 1
-    - type: Client
-      property: DisabledByDefault
-      value: 0
-
-  - name: reboot if TLS config was applied
-    win_reboot:
-    when: pri_personalise_tls_config is changed
-  when: man_host_type == '2008-x86' or man_host_type == '2008-x64' or man_host_type == '2008r2'
-
 - name: set show hidden files/folders and file extensions for the default user profile
   win_regedit:
     path: HKLM:\ANSIBLE\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -42,22 +13,6 @@
   - name: HideFileExt
     data: 0
 
-- name: disable screensaver for Server 2008 for the default user profile
-  win_regedit:
-    path: HKLM:\ANSIBLE\Control Panel\Desktop
-    name: '{{ item.name }}'
-    data: '{{ item.value|default(omit) }}'
-    type: string
-    state: '{{ item.state }}'
-    hive: C:\Users\Default\NTUSER.dat
-  when: man_host_type == '2008-x86' or man_host_type == '2008-x64'
-  loop:
-  - name: ScreenSaveActive
-    state: present
-    value: 0
-  - name: SCRNSAVE.EXE
-    state: absent
-
 - name: set This PC as the default view for Windows Explorer for the default user profile
   win_regedit:
     path: HKLM:\ANSIBLE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -67,9 +22,6 @@
     state: present
     hive: C:\Users\Default\NTUSER.dat
   when:  # this is only valid for 2016/10+
-  - man_host_type != '2008-x86'
-  - man_host_type != '2008-x64'
-  - man_host_type != '2008r2'
   - man_host_type != '2012'
   - man_host_type != '2012r2'
 
@@ -86,21 +38,6 @@
   - name: HideFileExt
     data: 0
 
-- name: disable screensaver for Server 2008 for the current user profile
-  win_regedit:
-    path: HKCU:\Control Panel\Desktop
-    name: '{{ item.name }}'
-    data: '{{ item.value|default(omit) }}'
-    type: string
-    state: '{{ item.state }}'
-  when: man_host_type == '2008-x86' or man_host_type == '2008-x64'
-  loop:
-  - name: ScreenSaveActive
-    state: present
-    value: 0
-  - name: SCRNSAVE.EXE
-    state: absent
-
 - name: set This PC as the default view for Windows Explorer for the current user profile
   win_regedit:
     path: HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -109,9 +46,6 @@
     type: dword
     state: present
   when:
-  - man_host_type != '2008-x86'
-  - man_host_type != '2008-x64'
-  - man_host_type != '2008r2'
   - man_host_type != '2012'
   - man_host_type != '2012r2'
 
@@ -125,7 +59,7 @@
 
 - name: install set Chocolatey packages
   win_chocolatey:
-    name: '{{ man_personalize_choco_packages }}'
+    name: '{{ man_personalize_choco_packages }}'  # FIXME: Filter out pwsh for Server 2012
     ignore_checksums: yes
     state: present
   when:
@@ -135,6 +69,21 @@
   vars:  # run with become as we aren't sure what packages the user has specified
     ansible_become_user: '{{ ansible_user }}'
     ansible_become_pass: '{{ ansible_password }}'
+
+- name: get pwsh path
+  win_shell: |
+    $pwsh = Get-Command -Name pwsh.exe -CommandType Application -ErrorAction SilentlyContinue
+    if ($pwsh) {
+        (New-Object -ComObject Scripting.FileSystemObject).GetFile($pwsh.Source).ShortPath
+    }
+  register: pri_personalize_pwsh_path
+
+- name: set up powershell subsystem from PSRemoting
+  win_lineinfile:
+    path: C:\ProgramData\ssh\sshd_config
+    line: Subsystem       powershell {{ pri_personalize_pwsh_path.stdout | trim }} -sshs -NoLogo -NoProfile
+    state: present
+  when: pri_personalize_pwsh_path.stdout| trim | bool
 
 - name: install the VirtualBox Guest Additions
   include_tasks: virtualbox.yml

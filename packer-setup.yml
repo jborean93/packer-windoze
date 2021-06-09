@@ -6,15 +6,15 @@
     opt_packer_setup_username: vagrant
     opt_packer_setup_password: vagrant
     opt_packer_setup_headless: true
-    opt_packer_setup_builder: virtualbox
+    opt_packer_setup_builder: qemu
 
   pre_tasks:
-  - name: check that the Ansible version is at least 2.7
+  - name: check that the Ansible version is at least 2.9
     assert:
       that:
       - ansible_version.major >= 2
-      - ansible_version.minor >= 7
-      msg: packer-windoze requires Ansible 2.7 or newer to run, please upgrade or checkout devel before running
+      - ansible_version.minor >= 9
+      msg: packer-windoze requires Ansible 2.9 or newer to run, please upgrade or checkout devel before running
 
   - name: check that the provider is valid
     assert:

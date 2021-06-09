@@ -6,9 +6,7 @@
         </component>
         <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <PersistAllDeviceInstalls>false</PersistAllDeviceInstalls>
-{% if man_is_longhorn == False %}
             <DoNotCleanUpNonPresentDevices>false</DoNotCleanUpNonPresentDevices>
-{% endif %}
         </component>
     </settings>
     <settings pass="oobeSystem">
@@ -23,14 +21,9 @@
                 <HideEULAPage>true</HideEULAPage>
                 <ProtectYourPC>1</ProtectYourPC>
                 <NetworkLocation>Home</NetworkLocation>
-{% if man_is_longhorn == False %}
                 <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-{% endif %}
             </OOBE>
             <TimeZone>UTC</TimeZone>
-{% if man_is_longhorn == True %}
-            <ComputerName>*</ComputerName>
-{% endif %}
             <UserAccounts>
                 <AdministratorPassword>
                     <Value>{{ansible_password}}</Value>
@@ -66,11 +59,5 @@
         </component>
     </settings>
     <settings pass="specialize">
-{% if man_is_longhorn == True %}
-        <!-- Server 2008 requires this to stop asking for the Computer Name after sysprep -->
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <ComputerName>*</ComputerName>
-        </component>
-{% endif %}
     </settings>
 </unattend>

@@ -1,20 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
-{% if pri_packer_setup_config.answer_longhorn == True %}
-    <servicing>
-        <package action="configure">
-            <assemblyIdentity name="Microsoft-Windows-Foundation-Package" version="6.0.6001.18000" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="" />
-            <selection name="MicrosoftWindowsPowerShell" state="true" />
-        </package>
-    </servicing>
-{% endif %}
     <settings pass="windowsPE">
 {% if opt_packer_setup_builder == 'qemu' %}
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-pnpcustomizationswinpe -->
         <component xmlns:wcm="https://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-PnpCustomizationsWinPE" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <DriverPaths>
                 <PathAndCredentials wcm:action="add" wcm:keyValue="1">
-                    <Path>E:\viostor\{{pri_packer_setup_config.driver_host_string}}\{{pri_packer_setup_config.architecture}}</Path> 
+                    <Path>E:\viostor\{{pri_packer_setup_config.driver_host_string}}\{{pri_packer_setup_config.architecture}}</Path>
                 </PathAndCredentials>
             </DriverPaths>
         </component>
@@ -34,25 +26,7 @@
         <component xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="Microsoft-Windows-Setup" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
             <DiskConfiguration>
                 <Disk wcm:action="add">
-{% if pri_packer_setup_config.answer_longhorn == True %}
-                    <CreatePartitions>
-                        <CreatePartition wcm:action="add">
-                            <Order>1</Order>
-                            <Type>Primary</Type>
-                            <Extend>true</Extend>
-                        </CreatePartition>
-                    </CreatePartitions>
-                    <ModifyPartitions>
-                        <ModifyPartition wcm:action="add">
-                            <Active>true</Active>
-                            <Format>NTFS</Format>
-                            <Label>Windows {{man_packer_setup_host_type}}</Label>
-                            <Letter>C</Letter>
-                            <Order>1</Order>
-                            <PartitionID>1</PartitionID>
-                        </ModifyPartition>
-                    </ModifyPartitions>
-{% elif opt_packer_setup_builder == 'hyperv' and pri_packer_setup_config.hv_generation == 2 %}
+{% if opt_packer_setup_builder == 'hyperv' %}
                     <CreatePartitions>
                         <CreatePartition wcm:action="add">
                             <Order>1</Order>
@@ -144,9 +118,7 @@
                     </InstallFrom>
                     <InstallTo>
                         <DiskID>0</DiskID>
-{% if pri_packer_setup_config.answer_longhorn == True %}
-                        <PartitionID>1</PartitionID>
-{% elif opt_packer_setup_builder == 'hyperv' and pri_packer_setup_config.hv_generation == 2 %}
+{% if opt_packer_setup_builder == 'hyperv' %}
                         <PartitionID>4</PartitionID>
 {% else %}
                         <PartitionID>2</PartitionID>
@@ -168,18 +140,14 @@
         </component>
     </settings>
     <settings pass="generalize">
-{% if pri_packer_setup_config.answer_longhorn == False %}
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-security-spp -->
         <component name="Microsoft-Windows-Security-SPP" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <SkipRearm>1</SkipRearm>
         </component>
-{% endif %}
         <!-- https://docs.microsoft.com/en-us/windows-hardware/customize/desktop/unattend/microsoft-windows-pnpsysprep -->
         <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="{{pri_packer_setup_config.architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <PersistAllDeviceInstalls>false</PersistAllDeviceInstalls>
-{% if pri_packer_setup_config.answer_longhorn == False %}
             <DoNotCleanUpNonPresentDevices>false</DoNotCleanUpNonPresentDevices>
-{% endif %}
         </component>
     </settings>
     <settings pass="oobeSystem">
@@ -196,19 +164,12 @@
                 <HideEULAPage>true</HideEULAPage>
                 <NetworkLocation>Home</NetworkLocation>
                 <ProtectYourPC>1</ProtectYourPC>
-{% if pri_packer_setup_config.answer_longhorn == False %}
                 <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-{% endif %}
-{% if man_packer_setup_host_type not in ("2008-x86", "2008-x64", "2008r2") %}
                 <HideLocalAccountScreen>true</HideLocalAccountScreen>
                 <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
                 <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
-{% endif %}
             </OOBE>
             <TimeZone>UTC</TimeZone>
-{% if pri_packer_setup_config.answer_longhorn == True %}
-            <ShowWindowsLive>false</ShowWindowsLive>
-{% endif %}
             <UserAccounts>
                 <LocalAccounts>
                     <LocalAccount wcm:action="add">
@@ -236,16 +197,6 @@
                 </Password>
             </AutoLogon>
             <FirstLogonCommands>
-{% if pri_packer_setup_config.answer_longhorn == True %}
-                <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted"</CommandLine>
-                    <Order>1</Order>
-                </SynchronousCommand>
-                <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe {{pri_packer_setup_bootstrap_drive}}:\bootstrap.ps1</CommandLine>
-                    <Order>2</Order>
-                </SynchronousCommand>
-{% else %}
                 <SynchronousCommand wcm:action="add">
                     <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Force"</CommandLine>
                     <Order>1</Order>
@@ -256,7 +207,6 @@
                     <Order>2</Order>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
-{% endif %}
             </FirstLogonCommands>
         </component>
     </settings>

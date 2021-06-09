@@ -20,7 +20,7 @@
   ignore_errors: yes
   register: pri_personalise_vbox_guest_install
 
-- name: attempt to recover from failed install (Server 2008 needs to add 1 more cert to the trusted store)
+- name: attempt to recover from failed install
   block:
   - name: install VBoxGuest.cat signer certificate
     win_shell: |

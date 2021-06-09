@@ -13,7 +13,6 @@
       - man_driver_host_string is defined
       - man_host_type is defined
       - man_host_architecture is defined
-      - man_is_longhorn is defined
       - man_packer_windoze_version is defined
       - man_skip_feature_removal is defined
       - man_personalize_choco_packages is defined
@@ -25,12 +24,11 @@
 
   roles:
   - update
-  - personalise
   - role: jborean93.win_openssh
     opt_openssh_firewall_profiles: domain,private,public
     opt_openssh_skip_start: True
-    opt_openssh_version: v8.0.0.0p1-Beta
-    when: not man_is_longhorn
+    opt_openssh_version: V8.6.0.0p1-Beta
+  - personalise
   - cleanup-winsxs
   - cleanup-features
   - cleanup

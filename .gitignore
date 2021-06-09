@@ -1,6 +1,7 @@
 # Packer Vagrant Cache
 output-virtualbox-iso/*
 output-hyperv-iso/*
+output-qemu/*
 packer_cache/*
 .vagrant/*
 *.box
@@ -13,19 +14,14 @@ hosts-*
 
 # Galaxy files
 roles/jborean93.*
+collections/*
 
 # Temp Packer files
-2008-x86/
-2008-x64/
-2008r2/
 2012
 2012r2/
 2016/
 2019/
-1709/
-1803/
-10-x86/
-10-x64/
+2022/
 
 # MacOS files
 .DS_Store

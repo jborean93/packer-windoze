@@ -1,6 +1,5 @@
 $ErrorActionPreference = 'Stop'
 $tmp_dir = $env:TEMP
-$script_dir = Split-Path -Path $($script:MyInvocation.MyCommand.Path) -Parent
 
 trap {
     $msg = "Unhandled exception`r`n$($_ | Out-String)"
@@ -25,15 +24,10 @@ Function Reboot-AndResume($action) {
     $reg_key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
     $reg_property_name = "bootstrap"
     Set-ItemProperty -Path $reg_key -Name $reg_property_name -Value $command
+
     Write-Log -message "rebooting server and continuing bootstrap.ps1 with action '$action'"
-    if (Get-Command -Name Restart-Computer -ErrorAction SilentlyContinue) {
-        Restart-Computer -Force
-        Start-Sleep -Seconds 10
-    } else {
-        # PS v1 (Server 2008) doesn't have the cmdlet Restart-Computer, use el-traditional
-        shutdown /r /t 0
-        Start-Sleep -Seconds 10
-    }
+    Restart-Computer -Force
+    Start-Sleep -Seconds 10
 }
 
 Function Run-Process($executable, $arguments) {
@@ -170,33 +164,28 @@ $bootstrap_actions = @(
         path = (Get-VirtIODriverPath -Name pvpanic)
         action = "driver"
     },
-    {% if man_packer_setup_host_type not in ['2008-x86', '2008-x64'] %}
-{# There is no relevant graphics driver for 2008 #}
     @{
         name = "Red Hat Virtio Graphics Driver"
         path = (Get-VirtIODriverPath -Name {{ (man_packer_setup_host_type == '2008r2') | ternary("qxl", "qxldod") }})
         action = "driver"
     },
-{# There is no driver for vioinput for 2008 #}
     @{
         name = "Red Hat Virtio VIOInput driver"
         path = (Get-VirtIODriverPath -Name vioinput)
         action = "driver"
     },
-{# Server 2008 cannot install SHA256 signed drivers non-interactively #}
     @{
         name = "Red Hat Virtio PCI serial"
         path = (Get-VirtIODriverPath -Name qemupciserial)
         action = "driver"
     },
-        {% if man_packer_setup_host_type not in ['2008r2', '2012', '2012r2'] %}
+    {% if man_packer_setup_host_type not in ['2012', '2012r2'] %}
 {# qemufwcfg only valid for 2016+ #}
     @{
         name = "Red Hat Virtio Firmware Config Driver"
         path = (Get-VirtIODriverPath -Name qemufwcfg)
         action = "driver"
     },
-        {% endif %}
     {% endif %}
 {% endif %}
     @{
@@ -236,7 +225,7 @@ for ($i = 0; $i -lt $actions.Count; $i++) {
             } else {
                 $src = $current_action.url.Split("/")[-1]
             }
-            $src = "$script_dir\$src"
+            $src = Join-Path $PSScriptRoot $src
             $exit_code = Run-Process -executable $src -arguments $current_action.arguments
             if ($exit_code -eq 3010) {
                 Reboot-AndResume -action $next_action.name
@@ -253,7 +242,7 @@ for ($i = 0; $i -lt $actions.Count; $i++) {
             } else {
                 $src = $current_action.url.Split("/")[-1]
             }
-            $zip_src = "$script_dir\$src"
+            $zip_src = Join-Path $PSScriptRoot $src
             Extract-Zip -zip $zip_src -dest $tmp_dir
             $install_file = Get-Item -Path "$tmp_dir\$($current_action.zip_file_pattern)"
             if ($install_file -eq $null) {
@@ -293,7 +282,7 @@ namespace PackerWindoze
 
             # Older hosts may not have the root Microsoft cert that has signed the VirtIO drivers installed. We
             # manually install it so we can install the driver silently without user interaction.
-            $root_cert_path = "$script_dir\MicrosoftCodeVerifRoot.crt"
+            $root_cert_path = Join-Path $PSScriptRoot 'MicrosoftCodeVerifRoot.crt'
             $root_cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $root_cert_path
             Import-Certificate -cert $root_cert -store "Root"
 

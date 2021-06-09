@@ -1,2 +1,8 @@
+roles:
 - src: jborean93.win_openssh
   version: v0.2.0
+
+collections:
+- name: ansible.windows
+- name: community.general
+- name: community.windows

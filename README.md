@@ -12,6 +12,7 @@ Each image is designed to be;
 * As small as can be possible for a Windows image
 * Contain minimal tools useful for Windows development such as the sysinternals suite
 * Enable WinRM (HTTP and HTTPS) and RDP on creation in Vagrant allowing other tools to interact with a new image without manual interaction
+* Incldues `pwsh` (formally known as PowerShell Core) on all host types except for Server 2012
 * Also include the latest [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH) in the image that starts up automatically
 * Each image contain the maximum amount of time available on a Windows evaluation image (usually 180 days) without prompting for a key
 
@@ -25,44 +26,31 @@ together more.
 To use the scripts in this repo you will need the following;
 
 * [pypsrp](https://pypi.org/project/pypsrp/)
-* [Packer](https://www.packer.io/docs/install/index.html) >= 1.0.0, 1.2.4 is required for Hyper-V with Server 2008 R2 support
-* [Ansible](https://github.com/ansible/ansible) >= 2.7.0
+* [Packer](https://www.packer.io/docs/install/index.html) >= 1.6.0
+* [Ansible](https://github.com/ansible/ansible) >= 2.9.0
 * `mkisofs` for Windows this needs to be installed in WSL where Ansible is located
 * [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/) to retrieve the latest Windows Updates for the build
 
 One of the following hypervisers as defined by `opt_packer_setup_builder`:
 
 * [VirtualBox](https://www.virtualbox.org/wiki/Downloads) >= 5.1.12
-* [Hyper-V](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-on-windows-server) - Server 2008 is not supported with Hyper-V
+* [Hyper-V](https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-on-windows-server)
 * [QEMU](https://www.qemu.org/)
 
-When setting `man_packer_setup_host_type: 2008-x64`, Ansible will extract the
-evaluation ISO from a self extracting archive. This requires the `unrar`
-package to be installed. If you don't want to install this package, manually
-extract the ISO on another box and specify the path under
-`opt_packer_setup_iso_path`.
-
-To install `mkisofs` and `unrar`, you can run one of the commands below
-depending on your distribution;
+To install `mkisofs`, you can run one of the commands below depending on your distribution;
 
 ```bash
 # for Debian/Ubuntu
-sudo apt-get install mkisofs unrar
+sudo apt-get install mkisofs
 
 # for RHEL/CentOS
 sudo yum install mkisofs
 
-sudo yum localinstall --nogpgcheck https://download1.rpmfusion.org/free/el/rpmfusion-free-release-7.noarch.rpm https://download1.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-7.noarch.rpm
-sudo yum install unrar
-
 # for Fedora
 sudo dnf install mkisofs
 
-sudo dnf install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-sudo dnf install unrar
-
 # for MacOS (requires Homebrew)
-brew install cdrtools unrar
+brew install cdrtools
 ```
 
 ## How to Run
@@ -115,7 +103,7 @@ allowed to share with the guest. This type of switch is required for 2 reasons;
 
 1. Allows the Windows host to access the guest
 2. Allows the guest to access the internet for things like updates and downloading packages
-
+opt_packer_setup_iso_path
 An Internal Network type covers the first point but you need an External
 Network type to access the internet.
 
@@ -129,21 +117,11 @@ The following parameters must be set using the `-e` arguments;
 
 You can set the host type to the following values
 
-* `2008-x86`: Windows Server 2008 Standard 32-bit
-* `2008-x64`: Windows Server 2008 Standard 64-bit
-* `2008r2`: Windows Server 2008 R2 Standard
 * `2012`: Windows Server 2012 Standard
 * `2012r2`: Windows Server 2012 R2 Standard
 * `2016`: Windows Server 2016 Standard
 * `2019`: Windows Server 2019 Standard
-
-The following host types can also be used but it requires the ISO to be
-manually downloaded and set with `opt_packager_setup_iso_path`. Microsoft does
-not offer evaluation ISOs for these builds so it won't be part of the public
-facing images
-
-* `1709`: Windows Server Build 1709 Standard
-* `1803`: Windows Server Build 1803 Standard
+* `2022`: Windows Server 2022 Standard
 
 #### Optional Variables
 
