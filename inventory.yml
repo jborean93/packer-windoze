@@ -1,0 +1,45 @@
+all:
+  children:
+    setup:
+      hosts:
+        '2012':
+          abc:
+
+        2012r2:
+          abc:
+
+        '2016':
+          abc:
+
+        '2019':
+          abc:
+
+        '2022':
+          box_tag: jborean93/WindowsServer2019
+
+          iso_src: https://software-download.microsoft.com/download/sg/20348.1.210507-1500.fe_release_SERVER_EVAL_x64FRE_en-us.iso
+          iso_checksum: 2ee3a0325f7230b1ff68bd8db2695f4102eae4ff32118382b1ab2e2b98a71aaa
+          iso_wim_label: Windows Server 2022 SERVERSTANDARD
+          architecture: amd64
+          driver_host_string: 2k19
+
+          bootstrap_files: []
+
+          virtualbox:
+            os_type: Windows2019_64
+
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: '{{ ansible_playbook_python }}'
+
+    windows:
+      vars:
+        ansible_connection: psrp
+        ansible_username: '{{ setup_username }}'
+        ansible_password: '{{ setup_password }}'
+
+  vars:
+    openssh_version: V8.6.0.0p1-Beta
+    virtio_version: 0.1.185-2
+    setup_username: vagrant
+    setup_password: vagrant

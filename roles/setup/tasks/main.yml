@@ -1,0 +1,61 @@
+- name: create common build directory
+  file:
+    path: '{{ playbook_dir }}/output/common'
+    state: directory
+  run_once: True
+
+- name: download latest Microsoft code verification root certificate for older hosts
+  get_url:
+    url: https://www.microsoft.com/pki/certs/MicrosoftCodeVerifRoot.crt
+    dest: '{{ playbook_dir }}/output/common/MicrosoftCodeVerifRoot.crt'
+  run_once: True
+
+- name: download Virtio ISO
+  get_url:
+    url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-{{ virtio_version }}/virtio-win.iso
+    dest: '{{ playbook_dir }}/output/common/virtio-win.iso'
+  when: platform != 'hyperv'
+  run_once: True
+
+- name: create host specific build directory
+  file:
+    path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso'
+    state: directory
+
+- name: create Autounattend.xml file
+  template:
+    src: '{{ item }}.tmpl'
+    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item }}'
+  register: iso_template_files
+  loop:
+  - Autounattend.xml
+  - bootstrap.ps1
+
+# TODO: Updates
+# TODO: Copy common files into iso dir
+# TODO: Fix warnings in mkisofs
+
+- name: create secondary iso
+  command: >-
+    mkisofs -joliet-long -lU
+    -o {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/secondary.iso') | quote }}
+    {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/iso') | quote }}
+  when: iso_template_files is changed
+
+- name: check if iso src for {{ inventory_hostname }} has been overriden
+  set_fact:
+    iso_src: '{{ hostvars[inventory_hostname]["iso_src_" ~ inventory_hostname] | default(iso_src) }}'
+
+- block:
+  - name: download Windows ISO
+    get_url:
+      url: '{{ iso_src }}'
+      dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/windows.iso'
+
+  - set_fact:
+      iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/windows.iso'
+
+  when: iso_src.startswith('http') or iso_src.startswith('https')
+
+- name: build platform runner args
+  include_tasks: '{{ platform }}.yml'

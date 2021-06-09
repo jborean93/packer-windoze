@@ -1,0 +1,9 @@
+- name: setup build files
+  hosts: setup
+  gather_facts: no
+  vars:
+    platform: qemu
+    headless: False  # TODO: Default to True
+
+  roles:
+  - setup

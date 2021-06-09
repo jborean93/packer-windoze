@@ -1,0 +1,36 @@
+- name: determine port to forward onto QEMU uest
+  set_fact:
+    guest_port: '{{ 29500 + (groups["setup"].index(inventory_hostname) * 2) }}'
+
+# TODO: Create qemu.qcow2
+
+- name: set runner args for qemu
+  set_fact:
+    invoke_runner_args: >-
+      qemu-system-x86_64
+      -name windoze-{{ inventory_hostname }}
+      -machine type=pc,accel=kvm
+      -smp cpus=2,sockets=2
+      -m 2048M
+      -vnc 127.0.0.1:{{ (guest_port | int) + 1 }}
+      -netdev user,id=user0,hostfwd=tcp::{{ guest_port }}-:5985
+      -device virtio-net,netdev=user0
+      -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/secondary.iso') | quote }},index=0,media=cdrom
+      -drive file={{ (playbook_dir ~ '/output/common/virtio-win.iso') | quote }},index=1,media=cdrom
+      -drive file={{ iso_src | quote }},index=2,media=cdrom
+      -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
+      -boot once=d
+
+- name: add non-headless display
+  set_fact:
+    invoke_runner_args: '{{ invoke_runner_args }} -display gtk'
+  when: not headless
+
+- name: add Windows host to host list
+  add_host:
+    name: win-{{ inventory_hostname }}
+    ansible_host: 127.0.0.1
+    ansible_port: '{{ guest_port }}'
+    groups:
+    - windows
+  changed_when: False

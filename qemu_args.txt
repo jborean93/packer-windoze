@@ -1,0 +1,29 @@
+usr/bin/qemu-system-x86_64 \
+  -display gtk \
+  -netdev user,id=user.0,hostfwd=tcp::5985-:5985 \
+  -device virtio-net,netdev=user.0 \
+  -boot once=d \
+  -name packer-qemu \
+  -machine type=pc,accel=kvm \
+  -vnc 127.0.0.1:24 \
+  -m 2048M \
+  -drive file=2022/secondary.iso,index=0,media=cdrom \
+  -drive file=2022/virtio.iso,index=1,media=cdrom \
+  -drive file=/home/jborean/Downloads/20348.1.210507-1500.fe_release_SERVER_EVAL_x64FRE_en-us.iso,index=2,media=cdrom \
+  -drive file=output-qemu/packer-qemu,if=virtio,cache=writeback,discard=ignore,format=qcow2 \
+  -smp cpus=2,sockets=2
+
+
+/usr/bin/qemu-system-x86_64 \
+  -smp cpus=2,sockets=2 \
+  -name packer-qemu \
+  -machine type=pc,accel=kvm \
+  -m 2048M \
+  -device virtio-net,netdev=user.0 \
+  -netdev user,id=user.0,hostfwd=tcp::5985-:5985 \
+  -vnc 127.0.0.1:88 \
+  -drive file=2022/secondary.iso,index=0,media=cdrom \
+  -drive file=2022/virtio.iso,index=1,media=cdrom \
+  -drive file=/home/jborean/Downloads/20348.1.210507-1500.fe_release_SERVER_EVAL_x64FRE_en-us.iso,index=2,media=cdrom \
+  -drive file=output-qemu/packer-qemu,if=virtio,cache=writeback,discard=ignore,format=qcow2 \
+  -boot once=d

@@ -17,6 +17,7 @@ roles/jborean93.*
 collections/*
 
 # Temp Packer files
+output/
 2012
 2012r2/
 2016/
