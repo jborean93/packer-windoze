@@ -1,0 +1,28 @@
+- name: stop all build instances
+  hosts: setup
+  vars:
+    pid_file_path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vm.pid'
+  gather_facts: no
+
+  tasks:
+  - name: check if VM PID file exists
+    stat:
+      path: '{{ pid_file_path }}'
+    register: vm_pid_stat
+
+  - name: stop VM process
+    when: vm_pid_stat.stat.exists
+    block:
+    - name: get VM pid
+      slurp:
+        src: '{{ pid_file_path }}'
+      register: vm_pid_raw
+
+    - name: stop VM process
+      command: kill {{ vm_pid_raw.content | b64decode | trim }}
+      ignore_errors: yes
+
+  - name: remove VM PID file
+    file:
+      path: '{{ pid_file_path }}'
+      state: absent

@@ -1,9 +1,22 @@
 - name: setup build files
-  hosts: setup
+  hosts: all
   gather_facts: no
   vars:
+    force: False
     platform: qemu
     headless: False  # TODO: Default to True
 
   roles:
   - setup
+
+- name: setup windows host
+  hosts: windows
+  gather_facts: no
+
+  pre_tasks:
+  - name: wait for Windows host WinRM to come online
+    wait_for_connection:
+      timeout: 14400  # The bootstrapping process can take some time
+
+  tasks:
+  - win_ping:

@@ -4,5 +4,8 @@ roles:
 
 collections:
 - name: ansible.windows
+
 - name: community.general
+  version: '>=3.0.0'
+
 - name: community.windows

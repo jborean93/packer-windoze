@@ -15,6 +15,7 @@ hosts-*
 # Galaxy files
 roles/jborean93.*
 collections/*
+!collections/ansible_collections/jborean93/windoze/*
 
 # Temp Packer files
 output/
@@ -29,3 +30,4 @@ output/
 
 # Various IDEs
 .idea/
+.vscode/

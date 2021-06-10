@@ -1,3 +1,15 @@
+- name: process host specific overrides
+  set_fact:
+    iso_src: '{{ hostvars[inventory_hostname]["iso_src_" ~ inventory_hostname] | default(iso_src) }}'
+    iso_checksum: >-
+      {{
+        (hostvars[inventory_hostname]["iso_src_" ~ inventory_hostname] is defined) | ternary(
+            hostvars[inventory_hostname]["iso_checksum_" ~ inventory_hostname] | default(""),
+            iso_checksum
+        )
+      }}
+    iso_wim_label: '{{ hostvars[inventory_hostname]["iso_wim_label_" ~ inventory_hostname] | default(iso_wim_label) }}'
+
 - name: create common build directory
   file:
     path: '{{ playbook_dir }}/output/common'
@@ -8,6 +20,7 @@
   get_url:
     url: https://www.microsoft.com/pki/certs/MicrosoftCodeVerifRoot.crt
     dest: '{{ playbook_dir }}/output/common/MicrosoftCodeVerifRoot.crt'
+  register: verif_root_cert
   run_once: True
 
 - name: download Virtio ISO
@@ -22,35 +35,81 @@
     path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso'
     state: directory
 
+- name: download WMFv3 hotfix for Server 2012
+  get_url:
+    url: https://s3.amazonaws.com/ansible-ci-files/hotfixes/KB2842230/463941_intl_x64_zip.exe
+    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/KB2842230-wmfv3.zip'
+  register: wmf3_hotfix
+  when: inventory_hostname == '2012'
+
+# FIXME: Use shorter filenames for iso compatibility
+- name: get the latest Windows updates
+  jborean93.windoze.get_win_updates:
+    name: '{{ updates.names }}'
+    product: '{{ updates.product }}'
+    architecture: '{{ architecture }}'
+    sort: last_updated
+    ignore_terms:  # Sometimes .NET and Preview updates appear in our search terms, we don't want them in the initial bootstrapping
+    - \.NET
+    - Preview
+  register: update_information
+
+- name: download the latest updates found
+  get_url:
+    url: '{{ item[0].url }}'
+    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item[0].filename }}'
+  register: downloaded_updates
+  when: item | length > 0
+  loop: '{{ update_information.updates }}'
+  loop_control:
+    label: '{{ "skipped" if item | length == 0 else item[0].title }}'
+
+- name: build update list for bootstrap script
+  set_fact:
+    update_files: >-
+      {{
+          update_files | default([]) + [
+              {
+                  "title": item[0].title,
+                  "filename": item[0].filename,
+              }
+          ]
+      }}
+  when: item | length > 0
+  loop: '{{ update_information.updates }}'
+  loop_control:
+    label: '{{ "skipped" if item | length == 0 else item[0].title }}'
+
 - name: create Autounattend.xml file
   template:
     src: '{{ item }}.tmpl'
     dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item }}'
+    newline_sequence: \r\n
   register: iso_template_files
   loop:
   - Autounattend.xml
   - bootstrap.ps1
 
-# TODO: Updates
-# TODO: Copy common files into iso dir
-# TODO: Fix warnings in mkisofs
-
 - name: create secondary iso
   command: >-
-    mkisofs -joliet-long -lU
+    mkisofs -RJ -l
+    -input-charset iso8859-1
+    -quiet
     -o {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/secondary.iso') | quote }}
     {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/iso') | quote }}
-  when: iso_template_files is changed
-
-- name: check if iso src for {{ inventory_hostname }} has been overriden
-  set_fact:
-    iso_src: '{{ hostvars[inventory_hostname]["iso_src_" ~ inventory_hostname] | default(iso_src) }}'
+    {{ (playbook_dir ~ '/output/common/MicrosoftCodeVerifRoot.crt') | quote }}
+  when: >-
+    verif_root_cert is changed or
+    (inventory_hostname == '2012' and wmf3_hotfix is changed) or
+    downloaded_updates is changed or
+    iso_template_files is changed
 
 - block:
   - name: download Windows ISO
     get_url:
       url: '{{ iso_src }}'
       dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/windows.iso'
+      checksum: '{{ iso_checksum | default(omit, True) }}'
 
   - set_fact:
       iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/windows.iso'
