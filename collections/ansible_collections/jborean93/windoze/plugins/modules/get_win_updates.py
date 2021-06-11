@@ -140,6 +140,7 @@ async def run_module():
                 name_updates.append({
                     'id': str(update.update_id),
                     'title': update.title,
+                    'kb': f'KB{update.kb_numbers[0]}',
                     'url': update.download_urls[0].url,
                     'filename': update.download_urls[0].file_name,
                 })

@@ -12,10 +12,10 @@ all:
           driver_host_string: 2k12
 
           updates:
-          - name: Servicing Stack Update for Windows Server 2012
             product: Windows Server 2012
-          - name: Security Monthly Quality Rollup for Windows Server 2012
-            product: Windows Server 2012
+            names:
+            - Servicing Stack Update for Windows Server 2012
+            - Security Monthly Quality Rollup for Windows Server 2012
 
           virtualbox:
             os_type: Windows2012_64
@@ -48,10 +48,10 @@ all:
           driver_host_string: 2k16
 
           updates:
-          - name: Servicing Stack Update for Windows Server 2016
             product: Windows Server 2016
-          - name: Cumulative Update for Windows Server 2016
-            product: Windows Server 2016
+            names:
+            - Servicing Stack Update for Windows Server 2016
+            - Cumulative Update for Windows Server 2016
 
           virtualbox:
             os_type: Windows2016_64

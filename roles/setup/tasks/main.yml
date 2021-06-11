@@ -53,11 +53,14 @@
     - \.NET
     - Preview
   register: update_information
+  until: update_information is successful
+  retries: 5
+  delay: 0
 
 - name: download the latest updates found
   get_url:
     url: '{{ item[0].url }}'
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item[0].filename }}'
+    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item[0].kb }}.msu'
   register: downloaded_updates
   when: item | length > 0
   loop: '{{ update_information.updates }}'
@@ -71,7 +74,7 @@
           update_files | default([]) + [
               {
                   "title": item[0].title,
-                  "filename": item[0].filename,
+                  "filename": item[0].kb ~ '.msu',
               }
           ]
       }}

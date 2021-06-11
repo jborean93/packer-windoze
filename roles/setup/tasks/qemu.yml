@@ -4,7 +4,7 @@
 
 - name: set pattern for finding the QEMU PID
   set_fact:
-    pid_pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname) | regex_escape("posix_basic") }}*'
+    pid_pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname) | regex_escape("posix_basic") }} -machine*'
 
 - name: check if VM is already running
   community.general.pids:

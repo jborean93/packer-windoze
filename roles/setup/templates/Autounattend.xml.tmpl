@@ -200,7 +200,7 @@
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add">
-                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Unrestricted -EncodedCommand {{ lookup("file", "invoke_bootstrap.ps1") | b64encode(encoding="utf-16-le") }}</CommandLine>
+                    <CommandLine>C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -File D:\bootstrap.ps1</CommandLine>
                     <Order>2</Order>
                     <RequiresUserInput>true</RequiresUserInput>
                 </SynchronousCommand>
