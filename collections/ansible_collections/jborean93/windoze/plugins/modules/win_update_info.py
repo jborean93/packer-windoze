@@ -4,7 +4,7 @@
 # MIT License (see LICENSE or https://opensource.org/licenses/MIT)
 
 DOCUMENTATION = r'''
-module: get_win_updates:
+module: win_update_info:
 short_description: Get Windows Update information
 description:
 - Gets Windows Update information from the Microsoft Update catalog.
@@ -52,7 +52,7 @@ author:
 
 EXAMPLES = r'''
 - name: get update information
-  jborean93.windoze.get_win_updates:
+  jborean93.windoze.win_update_info:
     name:
     - Servicing Stack Update for Windows Server 2019
     - Cumulative Update for Windows Server 2019

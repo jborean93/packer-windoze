@@ -26,12 +26,18 @@
   win_shell: Remove-Item -Path C:\Recovery -Force -Recurse
   ignore_errors: yes
 
+- name: check if ManifestCache exists
+  win_stat:
+    path: C:\Windows\WinSxs\ManifestCache
+  register: pri_cleanup_manifest_cache_stat
+
 # we want to clear the folder contents and not the folder itself
 - name: clear out the WinSXS ManifestCache folder
   win_shell: |
     &cmd.exe /c Takeown /f %windir%\winsxs\ManifestCache\*
     &cmd.exe /c Icacls %windir%\winsxs\ManifestCache\* /GRANT administrators:F
     &cmd.exe /c Del /q %windir%\winsxs\ManifestCache\*
+  when: pri_cleanup_manifest_cache_stat.stat.exists
 
 - name: see if Optimize-Volume cmdlet is available
   win_command: powershell.exe "Get-Command -Name Optimize-Volume"

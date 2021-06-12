@@ -12,10 +12,10 @@ pri_packer_setup_changelog:
   - Raised minimum Packer version to `1.6.0` and removed deprecated options.
   host_specific_changes:
     2012:
-    - TODO Recreate RDP certificate to use SHA256 as SHA1 is being deprecated.
+    - Recreate RDP certificate to use SHA256 as SHA1 is being deprecated.
     2022:
     - New build
-    - TODO Enabled TLS 1.3 in SChannel for both the client and the server.
+    - Enabled TLS 1.3 in SChannel for both the client and the server.
 - version: '0.7.0'
   date: 2019-12-20
   changes:

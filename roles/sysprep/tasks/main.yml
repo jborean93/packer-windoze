@@ -39,8 +39,8 @@
     dest: C:\Windows\Panther\Unattend\unattend.xml
 
 - name: copy across the sysprep powershell script
-  win_template:
-    src: setup.ps1.tmpl
+  win_copy:
+    src: setup.ps1
     dest: C:\temp\setup.ps1
 
 - name: create scheduled task to delete WinRM listeners and shutdown

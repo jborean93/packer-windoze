@@ -1,35 +1,62 @@
----
-- name: setup new Vagrant box with the latest updates and config
+- name: setup build files
+  hosts: setup
+  gather_facts: no
+  vars:
+    force: False
+    headless: False  # TODO: Default to True
+
+  pre_tasks:
+  - name: check that the Ansible version is at least 2.9
+    assert:
+      that:
+      - ansible_version.major >= 2
+      - ansible_version.minor >= 9
+      msg: packer-windoze requires Ansible 2.9 or newer to run, please upgrade or checkout devel before running
+
+  - name: check that the platform is valid
+    assert:
+      that:
+      - platform in ['hyperv', 'qemu', 'virtualbox']
+      msg: packer-windoze only supports the hyperv, qemu, and virtualbox provider
+
+  - name: check that pypsrp is installed
+    command: python -c "import pypsrp"
+    changed_when: False
+
+  roles:
+  - setup
+
+- name: setup windows host
   hosts: windows
   gather_facts: no
 
   pre_tasks:
-  - name: fail if mandatory vars are not set
-    assert:
-      that:
-      - ansible_become_method == "runas"
-      - ansible_become_user is defined
-      - man_provider is defined
-      - man_driver_host_string is defined
-      - man_host_type is defined
-      - man_host_architecture is defined
-      - man_packer_windoze_version is defined
-      - man_skip_feature_removal is defined
-      - man_personalize_choco_packages is defined
-
-  - name: make sure the WinRM service is set to auto
-    win_service:
-      name: winrm
-      start_mode: auto
+  - name: wait for Windows host WinRM to come online
+    wait_for_connection:
+      timeout: 14400  # The bootstrapping process can take some time
 
   roles:
   - update
+  - personalise
   - role: jborean93.win_openssh
     opt_openssh_firewall_profiles: domain,private,public
     opt_openssh_skip_start: True
-    opt_openssh_version: V8.6.0.0p1-Beta
-  - personalise
+    opt_openssh_version: '{{ openssh_version }}'
+    opt_openssh_powershell_subsystem: '{{ out_personalize_pwsh_path | default(omit) }}'
   - cleanup-winsxs
   - cleanup-features
   - cleanup
   - sysprep
+
+  post_tasks:
+  - name: shutdown host for sysprep
+    raw: schtasks.exe /Run /TN "packer-shutdown"
+
+- name: package Vagrant box
+  hosts: setup
+  gather_facts: no
+  tags:
+  - box
+
+  roles:
+  - box

@@ -1,4 +1,44 @@
 ---
+- name: install and enable TLSv1.3 for Server 2022
+  when: inventory_hostname == 'win-2022'
+  block:
+  - name: enable TLSv1.3 support for Server 2022
+    win_regedit:
+      path: HKLM:\SYSTEM\CurrentControlSet\Control\SecurityProviders\SCHANNEL\Protocols\TLS 1.3\{{ item.type }}
+      name: '{{ item.property }}'
+      data: '{{ item.value }}'
+      type: dword
+      state: present
+    register: pri_personalise_tls_config
+    loop:
+    - type: Server
+      property: Enabled
+      value: 1
+    - type: Server
+      property: DisabledByDefault
+      value: 0
+    - type: Client
+      property: Enabled
+      value: 1
+    - type: Client
+      property: DisabledByDefault
+      value: 0
+
+  - name: reboot if TLS config was applied
+    win_reboot:
+    when: pri_personalise_tls_config is changed
+
+- name: disable shutdown tracker
+  win_regedit:
+    path: HKLM:\Software\Policies\Microsoft\Windows NT\Reliability
+    name: '{{ item }}'
+    data: 0
+    type: dword
+    state: present
+  loop:
+  - ShutdownReasonOn
+  - ShutdownReasonUI
+
 - name: set show hidden files/folders and file extensions for the default user profile
   win_regedit:
     path: HKLM:\ANSIBLE\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
@@ -22,8 +62,8 @@
     state: present
     hive: C:\Users\Default\NTUSER.dat
   when:  # this is only valid for 2016/10+
-  - man_host_type != '2012'
-  - man_host_type != '2012r2'
+  - inventory_hostname != 'win-2012'
+  - inventory_hostname != 'win-2012r2'
 
 - name: set show hidden files/folders and file extensions for the current user profile
   win_regedit:
@@ -46,8 +86,8 @@
     type: dword
     state: present
   when:
-  - man_host_type != '2012'
-  - man_host_type != '2012r2'
+  - inventory_hostname != 'win-2012'
+  - inventory_hostname != 'win-2012r2'
 
 - name: disable automatic updates (prevents TrustedInstaller startup thrash on older images)
   win_regedit:
@@ -59,36 +99,51 @@
 
 - name: install set Chocolatey packages
   win_chocolatey:
-    name: '{{ man_personalize_choco_packages }}'  # FIXME: Filter out pwsh for Server 2012
+    name: '{{ choco_packages }}'
     ignore_checksums: yes
     state: present
   when:
-  - man_personalize_choco_packages|count > 0
-  - man_personalize_choco_packages[0] != ''
+  - choco_packages | count > 0
+  - choco_packages[0] != ''
   become: yes
   vars:  # run with become as we aren't sure what packages the user has specified
     ansible_become_user: '{{ ansible_user }}'
     ansible_become_pass: '{{ ansible_password }}'
 
-- name: get pwsh path
-  win_shell: |
-    $pwsh = Get-Command -Name pwsh.exe -CommandType Application -ErrorAction SilentlyContinue
-    if ($pwsh) {
-        (New-Object -ComObject Scripting.FileSystemObject).GetFile($pwsh.Source).ShortPath
-    }
-  register: pri_personalize_pwsh_path
+- name: configure pwsh
+  when: '"pwsh" in choco_packages'
+  block:
+  - name: configure PSRemoting for pwsh
+    ansible.windows.win_powershell:
+      error_action: stop
+      executable: pwsh
+      script: |
+        if (Get-PSSessionConfiguration -Name PowerShell.* -ErrorAction SilentlyContinue) {
+            $Ansible.Changed = $false
+            return
+        }
 
-- name: set up powershell subsystem from PSRemoting
-  win_lineinfile:
-    path: C:\ProgramData\ssh\sshd_config
-    line: Subsystem       powershell {{ pri_personalize_pwsh_path.stdout | trim }} -sshs -NoLogo -NoProfile
-    state: present
-  when: pri_personalize_pwsh_path.stdout| trim | bool
+        Enable-PSRemoting -Force
+
+  - name: get pwsh path
+    win_shell: |
+      $pwsh = Get-Command -Name pwsh.exe -CommandType Application -ErrorAction SilentlyContinue
+      if ($pwsh) {
+          (New-Object -ComObject Scripting.FileSystemObject).GetFile($pwsh.Source).ShortPath
+      }
+    register: pri_personalize_pwsh_path
+    retries: 5  # Found intermittent errors here, just try a few times - might need to replace the COM side.
+    delay: 5
+    until: pri_personalize_pwsh_path is successful
+
+  - name: set output fact for OpenSSH to use for pwsh subsystem path
+    set_fact:
+      out_personalize_pwsh_path: '{{ pri_personalize_pwsh_path.stdout | trim }}'
 
 - name: install the VirtualBox Guest Additions
   include_tasks: virtualbox.yml
-  when: man_provider == 'virtualbox'
+  when: platform == 'virtualbox'
 
 - name: install the QEMU Guest Additions
   include_tasks: qemu.yml
-  when: man_provider == 'qemu'
+  when: platform == 'qemu'

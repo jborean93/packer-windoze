@@ -10,6 +10,27 @@
       }}
     iso_wim_label: '{{ hostvars[inventory_hostname]["iso_wim_label_" ~ inventory_hostname] | default(iso_wim_label) }}'
 
+- name: load changelog settings
+  include_vars:
+    file: '{{ playbook_dir }}/.changelog.yml'
+
+- name: generate the main CHANGELOG.md
+  template:
+    src: CHANGELOG.md.tmpl
+    dest: '{{ playbook_dir }}/CHANGELOG.md'
+  run_once: True
+
+- name: set default Chocolatey packages to install
+  set_fact:
+    default_choco_packages:
+    - vim
+    - sysinternals
+
+- name: add pwsh to default packages if not running 2012
+  set_fact:
+    default_choco_packages: '{{ default_choco_packages + ["pwsh"] }}'
+  when: inventory_hostname != '2012'
+
 - name: create common build directory
   file:
     path: '{{ playbook_dir }}/output/common'
@@ -35,6 +56,11 @@
     path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso'
     state: directory
 
+- name: template out the description for the box
+  template:
+    src: description.md.tmpl
+    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/description.md'
+
 - name: download WMFv3 hotfix for Server 2012
   get_url:
     url: https://s3.amazonaws.com/ansible-ci-files/hotfixes/KB2842230/463941_intl_x64_zip.exe
@@ -42,9 +68,8 @@
   register: wmf3_hotfix
   when: inventory_hostname == '2012'
 
-# FIXME: Use shorter filenames for iso compatibility
 - name: get the latest Windows updates
-  jborean93.windoze.get_win_updates:
+  jborean93.windoze.win_update_info:
     name: '{{ updates.names }}'
     product: '{{ updates.product }}'
     architecture: '{{ architecture }}'

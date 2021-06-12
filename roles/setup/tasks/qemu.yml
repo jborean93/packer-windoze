@@ -4,7 +4,7 @@
 
 - name: set pattern for finding the QEMU PID
   set_fact:
-    pid_pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname) | regex_escape("posix_basic") }} -machine*'
+    pid_pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
 
 - name: check if VM is already running
   community.general.pids:
@@ -19,13 +19,22 @@
 - name: start VM if not already running
   when: force or qemu_pid.pids | length == 0
   block:
-  - name: enesure older images are removed
+  - name: enesure older artifacts are removed
     file:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/qemu.qcow2'
+      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
       state: absent
+    loop:
+    - box
+    - vagrant.box
+    - qemu.qcow2
 
   - name: create QEMU hdd image
-    command: qemu-img create -f qcow2 {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu.qcow2') | quote }} 40960M
+    command: >-
+      qemu-img create
+      -f qcow2
+      -o preallocation=off
+      {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu.qcow2') | quote }}
+      40960M
 
   - name: set runner args for qemu
     set_fact:
@@ -75,6 +84,11 @@
     name: 'win-{{ inventory_hostname }}'
     ansible_host: 127.0.0.1
     ansible_port: '{{ guest_port }}'
+    windoze_version: '{{ changelog[0].version }}'
+    platform: '{{ platform }}'
+    architecture: '{{ architecture }}'
+    driver_host_string: '{{ driver_host_string }}'
+    choco_packages: '{{ choco_packages | default(default_choco_packages) }}'
     groups:
     - windows
   changed_when: False

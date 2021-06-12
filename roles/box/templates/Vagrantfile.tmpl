@@ -1,0 +1,36 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+Vagrant.configure(2) do |config|
+  config.vm.box = "{{ box_tag }}"
+  config.vm.guest = :windows
+  config.vm.communicator = "winrm"
+  config.winrm.username = "{{ setup_username }}"
+  config.winrm.password = "{{ setup_password }}"
+  config.vm.boot_timeout = 600
+  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: 'rdp', auto_correct: true
+  config.vm.network :forwarded_port, guest: 22, host: 2222, id: 'ssh', auto_correct: true
+
+{% if platform == 'qemu' %}
+  # Disable rsync with libvirt as it's not compatible with Windows
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+{% endif %}
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus = 2
+    vb.default_nic_type = "virtio"
+    vb.gui = false
+    vb.memory = 2048
+  end
+
+  config.vm.provider "hyperv" do |h|
+    h.cpus = 2
+    h.memory = 2048
+  end
+
+  config.vm.provider "libvirt" do |l|
+    l.cpus = 2
+    l.disk_bus = "virtio"
+    l.memory = 2048
+    l.nic_model_type = "virtio"
+  end
+end

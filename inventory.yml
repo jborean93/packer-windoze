@@ -83,7 +83,7 @@ all:
           architecture: amd64
           driver_host_string: 2k19  # FUTURE: update once virtio does
 
-          updates:
+          updates:  # FUTURE: This might have changed, look into once more updates are available
             product: Windows Server 2022
             names:
             - Servicing Stack Update for Windows Server 2022
@@ -104,8 +104,11 @@ all:
         ansible_psrp_protocol: http
         ansible_psrp_auth: basic
         ansible_psrp_message_encryption: never
+        ansible_become_method: runas
+        ansible_become_user: SYSTEM
 
   vars:
+    platform: qemu
     openssh_version: V8.6.0.0p1-Beta
     virtio_version: 0.1.185-2
     setup_username: vagrant
