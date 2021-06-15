@@ -38,5 +38,5 @@
     win_command: pnputil.exe -a "C:\Program Files\Oracle\VirtualBox Guest Additions\VBoxGuest.inf"
 
   - name: install VirtualBox Guest Additions again
-    win_command: '{ {pri_personalise_vbox_guest_root }}:\VBoxWindowsAdditions.exe /force /with_autologon /with_d3d /with_wddm /S'
+    win_command: '{{ pri_personalise_vbox_guest_root }}:\VBoxWindowsAdditions.exe /force /with_autologon /with_d3d /with_wddm /S'
   when: pri_personalise_vbox_guest_install.rc != 0
