@@ -102,6 +102,7 @@
     name: '{{ choco_packages }}'
     ignore_checksums: yes
     state: present
+  register: choco_package_install
   when:
   - choco_packages | count > 0
   - choco_packages[0] != ''
@@ -113,6 +114,13 @@
 - name: configure pwsh
   when: '"pwsh" in choco_packages'
   block:
+  # It seems like PATH isn't updated straight await. Might need a bounce of the WinRM service
+  # but that's harder to achieve so just reboot the host to be safe
+  - name: reboot host to update PATH env
+    win_reboot:
+    when: choco_package_install is changed
+
+  # TODO: Find a way to handle the WinRM service bouncing
   - name: configure PSRemoting for pwsh
     ansible.windows.win_powershell:
       error_action: stop

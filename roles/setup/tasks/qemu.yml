@@ -1,14 +1,6 @@
-- name: determine port to forward onto QEMU uest
-  set_fact:
-    guest_port: '{{ 29500 + (groups["setup"].index(inventory_hostname) * 2) }}'
-
-- name: set pattern for finding the QEMU PID
-  set_fact:
-    pid_pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
-
 - name: check if VM is already running
   community.general.pids:
-    pattern: '{{ pid_pattern }}'
+    pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
   register: qemu_pid
 
 - name: kill existing VM if force is specified
@@ -24,16 +16,21 @@
       path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
       state: absent
     loop:
+    - qemu
     - box
     - vagrant.box
-    - qemu.qcow2
+
+  - name: create QEMU build dir
+    file:
+      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/qemu'
+      state: directory
 
   - name: create QEMU hdd image
     command: >-
       qemu-img create
       -f qcow2
       -o preallocation=off
-      {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu.qcow2') | quote }}
+      {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
       40960M
 
   - name: set runner args for qemu
@@ -47,10 +44,10 @@
         -vnc 127.0.0.1:{{ (guest_port | int) + 1 }}
         -netdev user,id=user0,hostfwd=tcp::{{ guest_port }}-:5985
         -device virtio-net,netdev=user0
-        -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/secondary.iso') | quote }},index=0,media=cdrom
-        -drive file={{ (playbook_dir ~ '/output/common/virtio-win.iso') | quote }},index=1,media=cdrom
-        -drive file={{ iso_src | quote }},index=2,media=cdrom
-        -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
+        -drive file={{ iso_src | quote }},index=0,media=cdrom
+        -drive file={{ secondary_iso_src | quote }},index=1,media=cdrom
+        -drive file={{ (playbook_dir ~ '/output/common/virtio-win.iso') | quote }},index=2,media=cdrom
+        -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
         -boot once=d
         -daemonize
 
@@ -61,34 +58,3 @@
 
   - name: start up QEMU VM
     command: '{{ invoke_runner_args }}'
-
-- name: get PID of running QEMU VM
-  community.general.pids:
-    pattern: '{{ pid_pattern }}'
-  register: qemu_pid
-
-- name: fail if we couldn't find the PID
-  assert:
-    that:
-    - qemu_pid.pids | length == 1
-    fail_msg: Failed to find QEMU PID
-  when: not qemu_pid is skipped
-
-- name: create PID file
-  copy:
-    content: '{{ qemu_pid.pids[0] }}'
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vm.pid'
-
-- name: add Windows host to host list
-  add_host:
-    name: 'win-{{ inventory_hostname }}'
-    ansible_host: 127.0.0.1
-    ansible_port: '{{ guest_port }}'
-    windoze_version: '{{ changelog[0].version }}'
-    platform: '{{ platform }}'
-    architecture: '{{ architecture }}'
-    driver_host_string: '{{ driver_host_string }}'
-    choco_packages: '{{ choco_packages | default(default_choco_packages) }}'
-    groups:
-    - windows
-  changed_when: False

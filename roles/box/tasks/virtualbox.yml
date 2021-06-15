@@ -1,0 +1,13 @@
+- name: build box metadata
+  set_fact:
+    box_metadata:
+      provider: virtualbox
+
+- set_fact:
+    test: |
+      VBoxManage: []string{"storageattach", "packer-virtualbox-iso-1623702757", "--storagectl", "IDE Controller", "--port", "0", "--device", "1", "--type", "dvddrive", "--medium", "none"}
+      VBoxManage: []string{"storageattach", "packer-virtualbox-iso-1623702757", "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "none"}
+      VBoxManage: []string{"storagectl", "packer-virtualbox-iso-1623702757", "--name", "Sata Controller", "--remove"}
+      VBoxManage: []string{"modifyvm", "packer-virtualbox-iso-1623702757", "--natpf1", "delete", "packercomm"}
+      VBoxManage: []string{"export", "packer-virtualbox-iso-1623702757", "--output", "output-virtualbox-iso/packer-virtualbox-iso-1623702757.ovf"}
+      VBoxManage: []string{"unregistervm", "packer-virtualbox-iso-1623702757", "--delete"}

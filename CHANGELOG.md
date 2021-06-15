@@ -13,12 +13,11 @@ contains a list of changes that each incorporate.
 * Disabled shutdown tracker UI by default.
 * Added Server 2022 based on the latest preview ISO on the evaluation centre.
 * Added `pwsh` to the image and configured SSH remoting for pwsh.
+* Recreate RDP certificate to use SHA256 as SHA1 is being deprecated.
 * Updated OpenSSH version to [v8.6.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/V8.6.0.0p1-Beta).
 * Updated VirtIO driver version to `0.1.185`.
 * Raised minimum Ansible version to `2.9.0`.
 * Raised minimum Packer version to `1.6.0` and removed deprecated options.
-* 2012
-    * Recreate RDP certificate to use SHA256 as SHA1 is being deprecated.
 * 2022
     * New build added in this version
 

@@ -10,10 +10,14 @@ import traceback
 import uuid
 
 from typing import (
+    Any,
     AsyncIterable,
+    Awaitable,
+    Callable,
     Dict,
     List,
     Optional,
+    Tuple,
 )
 
 HTTPX_IMP_ERR = None
@@ -59,21 +63,45 @@ class WUDownloadInfo(collections.namedtuple('WUDownloadInfo', [
         return f'{self.file_name or "unknown"} - {self.long_languages or "unknown language"}'
 
 
+async def _invoke_request(
+    proc_func: Callable[[str], Any],
+    func: Callable[[Any], Awaitable[Any]],
+    *args,
+    **kwargs
+) -> Any:
+    # The update catalog is crazy unstable and can comsetimes return an error, no response, something else. Instead we
+    # just try the request multiple times until it works. Not great but I don't have time to find out a better way.
+    failed_once = False
+
+    while True:
+        try:
+            resp = await func(*args, **kwargs)
+            resp_text = resp.content.decode().strip()
+            return proc_func(resp_text)
+
+        except:
+            if failed_once:
+                # I found that if it fails at least once adding a sleep between attempts helps.
+                await asyncio.sleep(1)
+
+            failed_once = True
+
+
 async def _get_update_details(
     client: httpx.AsyncClient,
     update_id: str,
 ) -> bs4.BeautifulSoup:
-    while True:
-        resp = await client.get(f'{CATALOG_URL}ScopedViewInline.aspx',
-            params={'updateId': update_id})
-        resp_text = resp.content.decode().strip()
 
-        details = bs4.BeautifulSoup(resp_text, 'html.parser')
+    def proc_func(text: str) -> bs4.BeautifulSoup:
+        details = bs4.BeautifulSoup(text, 'html.parser')
         body_class_list = details.body['class']
-        if "error" not in body_class_list:
-            break
+        if 'error' in body_class_list:
+            raise Exception("Invalid response - try again")
 
-    return details
+        return details
+
+    return await _invoke_request(proc_func, client.get, f'{CATALOG_URL}ScopedViewInline.aspx',
+        params={'updateId': update_id})
 
 
 async def _get_update_download_urls(
@@ -81,20 +109,21 @@ async def _get_update_download_urls(
     update_id: str,
 ) -> List[WUDownloadInfo]:
 
+    def proc_func(text: str) -> Tuple[str, List]:
+        link_matches = re.findall(DOWNLOAD_PATTERN, text)
+        if len(link_matches):
+            return text, link_matches
+
+        else:
+            raise Exception("Invalid response - try again")
+
     update_ids = json.dumps({
         'size': 0,
         'updateID': update_id,
         'uidInfo': update_id,
     })
-
-    while True:
-        resp = await client.post(f'{CATALOG_URL}DownloadDialog.aspx', data={'updateIDs': f'[{update_ids}]'})
-        resp_text = resp.content.decode().strip()
-
-        link_matches = re.findall(DOWNLOAD_PATTERN, resp_text)
-        if len(link_matches):
-            break
-
+    resp_text, link_matches = await _invoke_request(proc_func, client.post, f'{CATALOG_URL}DownloadDialog.aspx',
+        data={'updateIDs': f'[{update_ids}]'})
 
     urls = []
     for download_id, url in link_matches:

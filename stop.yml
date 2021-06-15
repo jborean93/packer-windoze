@@ -1,28 +1,37 @@
 - name: stop all build instances
   hosts: setup
-  vars:
-    pid_file_path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vm.pid'
   gather_facts: no
 
   tasks:
-  - name: check if VM PID file exists
-    stat:
-      path: '{{ pid_file_path }}'
-    register: vm_pid_stat
+  # QEMU
+  - name: QEMU - check if VM is already running
+    community.general.pids:
+      pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
+    register: qemu_pid
 
-  - name: stop VM process
-    when: vm_pid_stat.stat.exists
-    block:
-    - name: get VM pid
-      slurp:
-        src: '{{ pid_file_path }}'
-      register: vm_pid_raw
+  - name: QEMU - stop VMs
+    command: kill {{ item }}
+    loop: '{{ qemu_pid.pids }}'
 
-    - name: stop VM process
-      command: kill {{ vm_pid_raw.content | b64decode | trim }}
-      ignore_errors: yes
+  # VirtualBox
+  - name: VirtualBox - check if VM is registered
+    command: VBoxManage showvminfo windoze-{{ inventory_hostname }}
+    register: vbox_vm_info
+    changed_when: False
+    failed_when: False
 
-  - name: remove VM PID file
+  - name: VirtualBox - stop VM
+    command: VBoxManage controlvm {{ ('windoze-' ~ inventory_hostname) | quote }} poweroff
+    when: '"running" in vbox_vm_info.stdout'
+
+  - name: VirtualBox - remove VM
+    command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
+    when: vbox_vm_info.rc == 0
+
+  - name: remove any provider specific build artifacts
     file:
-      path: '{{ pid_file_path }}'
+      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
       state: absent
+    loop:
+    - vbox
+    - qemu

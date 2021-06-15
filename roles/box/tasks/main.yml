@@ -1,26 +1,3 @@
-- name: check if PID file exists
-  stat:
-    path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vm.pid'
-  register: pid_stat
-
-- name: wait for VM process to finish
-  when: pid_stat.stat.exists
-  block:
-  - name: get VM PID
-    slurp:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vm.pid'
-    register: vm_pid
-
-  - name: wait for VM process to complete
-    wait_for:
-      path: /proc/{{ vm_pid.content | b64decode }}/status
-      state: absent
-
-  - name: remove vm PID file
-    file:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vm.pid'
-      state: absent
-
 - set_fact:
     box_path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/box'
 
@@ -35,34 +12,16 @@
     dest: '{{ box_path }}/Vagrantfile'
   register: box_template
 
-- name: compress VM image
-  command: >-
-    qemu-img convert
-    -c
-    -O qcow2
-    {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu.qcow2') | quote }}
-    {{ (box_path ~ '/box.img') | quote }}
-  register: box_img
-  args:
-    creates: '{{ box_path }}/box.img'
+- name: prepare provider specific box contents
+  include_tasks: '{{ platform }}.yml'
 
-- name: remove original VM img
+- name: remove build artifacts
   file:
-    path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/qemu.qcow2'
+    path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
     state: absent
-  when: box_img is changed
-
-- name: get image details
-  command: qemu-img info --output=json {{ (box_path ~ '/box.img') | quote }}
-  register: qemu_img_info
-  changed_when: False
-
-- name: build box metadata
-  set_fact:
-    box_metadata:
-      format: qcow2
-      provider: libvirt
-      virtual_size: '{{ (((qemu_img_info.stdout | trim | from_json)["virtual-size"] | int) / 1073741824) | int }}'
+  loop:
+  - qemu
+  - vbox
 
 - name: create metadata.json
   copy:
@@ -76,10 +35,8 @@
     --create
     --verbose
     --sparse
-    ./metadata.json
-    ./Vagrantfile
-    ./box.img
-    | pigz -c > ../vagrant.box
+    ./*
+    | pigz -c > ../{{ platform }}.box
   args:
     chdir: '{{ box_path }}'
   when: >-

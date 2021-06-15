@@ -118,12 +118,16 @@
   - Autounattend.xml
   - bootstrap.ps1
 
+- name: set secondary iso path fact
+  set_fact:
+    secondary_iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ inventory_hostname }}-secondary.iso'
+
 - name: create secondary iso
   command: >-
     mkisofs -RJ -l
     -input-charset iso8859-1
     -quiet
-    -o {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/secondary.iso') | quote }}
+    -o {{ secondary_iso_src | quote }}
     {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/iso') | quote }}
     {{ (playbook_dir ~ '/output/common/MicrosoftCodeVerifRoot.crt') | quote }}
   when: >-
@@ -136,13 +140,31 @@
   - name: download Windows ISO
     get_url:
       url: '{{ iso_src }}'
-      dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/windows.iso'
+      dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ inventory_hostname }}-windows.iso'
       checksum: '{{ iso_checksum | default(omit, True) }}'
 
   - set_fact:
-      iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/windows.iso'
+      iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ inventory_hostname }}-windows.iso'
 
   when: iso_src.startswith('http') or iso_src.startswith('https')
 
-- name: build platform runner args
+- name: determine port to forward onto VM guest
+  set_fact:
+    guest_port: '{{ 29500 + (groups["setup"].index(inventory_hostname) * 2) }}'
+
+- name: start build VM
   include_tasks: '{{ platform }}.yml'
+
+- name: add Windows host to host list
+  add_host:
+    name: 'win-{{ inventory_hostname }}'
+    ansible_host: 127.0.0.1
+    ansible_port: '{{ guest_port }}'
+    windoze_version: '{{ changelog[0].version }}'
+    platform: '{{ platform }}'
+    architecture: '{{ architecture }}'
+    driver_host_string: '{{ driver_host_string }}'
+    choco_packages: '{{ choco_packages | default(default_choco_packages) }}'
+    groups:
+    - windows
+  changed_when: False
