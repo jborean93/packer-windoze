@@ -120,18 +120,8 @@
     win_reboot:
     when: choco_package_install is changed
 
-  # TODO: Find a way to handle the WinRM service bouncing
   - name: configure PSRemoting for pwsh
-    ansible.windows.win_powershell:
-      error_action: stop
-      executable: pwsh
-      script: |
-        if (Get-PSSessionConfiguration -Name PowerShell.* -ErrorAction SilentlyContinue) {
-            $Ansible.Changed = $false
-            return
-        }
-
-        Enable-PSRemoting -Force
+    jborean93.windoze.psremoting:
 
   - name: get pwsh path
     win_shell: |

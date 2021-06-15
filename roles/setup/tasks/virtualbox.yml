@@ -10,7 +10,6 @@
   get_url:
     url: https://download.virtualbox.org/virtualbox/{{ vbox_version }}/VBoxGuestAdditions_{{ vbox_version }}.iso
     dest: '{{ playbook_dir }}/output/common/VBoxGuestAdditions.iso'
-    checksum: sha256:https://download.virtualbox.org/virtualbox/{{ vbox_version }}/SHA256SUMS
   run_once: True
 
 - name: check if VM is registered
