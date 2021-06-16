@@ -28,6 +28,9 @@
     command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
     when: vbox_vm_info.rc == 0
 
+  # Hyper-V
+
+  # Common
   - name: remove any provider specific build artifacts
     file:
       path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'

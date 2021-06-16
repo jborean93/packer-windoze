@@ -29,32 +29,30 @@
     command: >-
       qemu-img create
       -f qcow2
-      -o preallocation=off
+      -o preallocation=metadata
       {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
       40960M
 
-  - name: set runner args for qemu
-    set_fact:
-      invoke_runner_args: >-
-        qemu-system-x86_64
-        -name windoze-{{ inventory_hostname }}
-        -machine type=pc,accel=kvm
-        -smp cpus=2,sockets=2
-        -m 2048M
-        -vnc 127.0.0.1:{{ (guest_port | int) + 1 }}
-        -netdev user,id=user0,hostfwd=tcp::{{ guest_port }}-:5985
-        -device virtio-net,netdev=user0
-        -drive file={{ iso_src | quote }},index=0,media=cdrom
-        -drive file={{ secondary_iso_src | quote }},index=1,media=cdrom
-        -drive file={{ (playbook_dir ~ '/output/common/virtio-win.iso') | quote }},index=2,media=cdrom
-        -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
-        -boot once=d
-        -daemonize
-
-  - name: add non-headless display
-    set_fact:
-      invoke_runner_args: '{{ invoke_runner_args }} -display gtk'
-    when: not headless
-
   - name: start up QEMU VM
-    command: '{{ invoke_runner_args }}'
+    command: >-
+      qemu-system-x86_64
+      -name windoze-{{ inventory_hostname }}
+      -machine type=pc,accel=kvm
+      -cpu host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time
+      -smp cpus=2,sockets=2
+      -m 2048M
+      -vga qxl
+      -display {{ headless | ternary('none', 'gtk') }}
+      -spice port={{ (guest_port | int) + 1 }},addr=127.0.0.1,disable-ticketing
+      -device virtio-serial-pci
+      -device virtserialport,chardev=spicechannel{{ inventory_hostname }}0,name=com.redhat.spice.0
+      -chardev spicevmc,id=spicechannel{{ inventory_hostname }}0,name=vdagent
+      -usb -device usb-tablet
+      -netdev user,id=user0,hostfwd=tcp::{{ guest_port }}-:5985
+      -device virtio-net,netdev=user0
+      -drive file={{ iso_src | quote }},index=0,media=cdrom
+      -drive file={{ secondary_iso_src | quote }},index=1,media=cdrom
+      -drive file={{ (playbook_dir ~ '/output/common/virtio-win.iso') | quote }},index=2,media=cdrom
+      -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
+      -boot once=d
+      -daemonize

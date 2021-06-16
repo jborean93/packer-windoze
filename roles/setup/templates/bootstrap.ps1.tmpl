@@ -303,6 +303,14 @@ namespace PackerWindoze
         }
 
         winrm {
+{% if platform == 'virtualbox' and inventory_hostname == '2022' %}
+{# Bug in NetKVM for Server 2022 - https://github.com/virtio-win/kvm-guest-drivers-windows/issues/583 #}
+            Write-Log -Message "Disabling Offload Tx Checksum for NetKVM adapter"
+            Get-NetAdapter |
+                Where-Object DriverFileName -eq 'netkvm.sys' |
+                Set-NetAdapterAdvancedProperty -RegistryKeyword 'Offload.TxChecksum' -RegistryValue 0
+
+{% endif %}
             Write-Log -Message "Configuring WinRM listener to work over 5985 with Basic auth"
             &winrm.cmd quickconfig -q
             Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true

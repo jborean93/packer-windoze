@@ -3,7 +3,7 @@
   gather_facts: no
   vars:
     force: False
-    headless: False  # TODO: Default to True
+    headless: True
 
   pre_tasks:
   - name: check that the Ansible version is at least 2.9
@@ -51,6 +51,13 @@
   post_tasks:
   - name: shutdown host for sysprep
     raw: schtasks.exe /Run /TN "packer-shutdown"
+
+  - name: wait for Windows host to go offline
+    wait_for:
+      host: '{{ ansible_host }}'
+      port: '{{ ansible_port }}'
+      state: stopped
+    delegate_to: localhost
 
 - name: package Vagrant box
   hosts: setup

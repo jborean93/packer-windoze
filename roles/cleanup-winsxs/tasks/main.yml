@@ -19,7 +19,7 @@
 
 # Server 2016 fails on the first few runs, retry up to 5 times
 - name: run DISM with reset base on hosts that support it
-  win_command: DISM.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase
+  win_command: DISM.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase /Quiet
   register: pri_cleanup_winsxs_cleanup_result
   until: pri_cleanup_winsxs_cleanup_result.rc == 0
   retries: 5
@@ -28,7 +28,7 @@
   when: pri_cleanup_winsxs_dism_supported.stdout_lines[0] == "true"
 
 - name: run DISM to clear service packs
-  win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded
+  win_command: DISM.exe /Online /Cleanup-Image /SPSuperseded /Quiet
 
 - name: check if cleanmgr.exe is natively available
   win_stat:

@@ -4,6 +4,9 @@ roles:
 
 collections:
 - name: ansible.windows
+  version: '>=1.7.0'
+
+- name: chocolatey.chocolatey
 
 - name: community.general
   version: '>=3.0.0'

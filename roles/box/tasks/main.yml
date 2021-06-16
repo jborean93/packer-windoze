@@ -36,7 +36,7 @@
     --verbose
     --sparse
     ./*
-    | pigz -c > ../{{ platform }}.box
+    | pigz --best -c > ../{{ platform }}.box
   args:
     chdir: '{{ box_path }}'
   when: >-

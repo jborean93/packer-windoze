@@ -12,7 +12,6 @@ from ansible.utils.display import Display
 
 from typing import (
     Dict,
-    Tuple,
 )
 
 display = Display()
@@ -40,7 +39,7 @@ class ActionModule(ActionBase):
             },
             task_vars=task_vars,
         )
-        if result['output']:  # TODO: Actually check the output here
+        if result['output'] != []:
             return {'changed': False}
 
         res = {'changed': True}
@@ -52,7 +51,7 @@ class ActionModule(ActionBase):
         # Enable-PSRemoting. Inspired from community.windows.win_pssession_configuration.
         self._task.async_val = 60
         self._task.poll = 5
-        async_result = self._execute_command(
+        async_result = self._execute_module(
             module_name='ansible.windows.win_powershell',
             module_args={
                 'script': 'Enable-PSRemoting -Force',
@@ -62,6 +61,7 @@ class ActionModule(ActionBase):
             },
             task_vars=task_vars,
         )
+        jid = async_result['ansible_job_id']
 
         # Turn off async so we don't run the following actions as async
         self._task.async_val = 0
@@ -70,17 +70,18 @@ class ActionModule(ActionBase):
             'sleep': 5,
         })
         status_action = self._get_action_task('async_status', {
-            'jid': async_result['ansible_job_id'],
+            'jid': jid,
             'mode': 'status',
         })
-        
-        for i in range(3):
+
+        tries = 0
+        while True:
             try:
                 # check up on the async job
                 job_status = status_action.run(task_vars=task_vars)
 
                 if job_status.get('failed', False):
-                    res.update(job_status)
+                    res.update(job_status)  # Includes the failure information
                     break
 
                 if job_status.get('finished', False):
@@ -89,23 +90,24 @@ class ActionModule(ActionBase):
                 time.sleep(self._task.poll)
 
             except Exception as e:
-                if i == 2:
+                tries += 1
+                if tries == 5:
                     return {
                         'msg': f'Unknown failure while waiting for task to complete: {e!s}',
                         'exception': traceback.format_exc(),
                     }
 
                 display.vvvv(f'Failure while waiting for task to complete (running wait_for_connection): {e!s}')
-                wait_connection_action.run(task_vars=task_vars)
+                wait_for_action.run(task_vars=task_vars)
 
         cleanup_action = self._get_action_task('async_status', {
-            'jid': async_result['ansible_job_id'],
+            'jid': jid,
             'mode': 'cleanup',
         })
         try:
             cleanup_res = cleanup_action.run(task_vars=task_vars)
             if cleanup_res.get('failed', False):
-                display.warning(f"Clean up of async status failed on the remote host: {clenaup_res.get('msg', cleanup_res)}")
+                display.warning(f"Clean up of async status failed on the remote host: {cleanup_res.get('msg', cleanup_res)}")
 
         except Exception as e:
             display.warning(f"Clean up of async status failed on the remote host: {e}")

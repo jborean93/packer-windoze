@@ -47,12 +47,7 @@
       <Clipboard/>
     </Hardware>
     <StorageControllers>
-      <StorageController name="SATA" type="AHCI" PortCount="5" useHostIOCache="false" Bootable="true" IDE0MasterEmulationPort="0" IDE0SlaveEmulationPort="1" IDE1MasterEmulationPort="2" IDE1SlaveEmulationPort="3">
-        <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="1" device="0"/>
-        <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="2" device="0"/>
-        <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="3" device="0"/>
-        <AttachedDevice passthrough="false" type="DVD" hotpluggable="false" port="4" device="0"/>
-      </StorageController>
+      <StorageController name="SATA" type="AHCI" PortCount="5" useHostIOCache="true" Bootable="true" IDE0MasterEmulationPort="0" IDE0SlaveEmulationPort="1" IDE1MasterEmulationPort="2" IDE1SlaveEmulationPort="3"/>
     </StorageControllers>
   </Machine>
 </VirtualBox>

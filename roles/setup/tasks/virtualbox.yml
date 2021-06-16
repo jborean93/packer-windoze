@@ -86,4 +86,7 @@
       index_var: idx
 
   - name: start VM
-    command: VBoxManage startvm {{ ('windoze-' ~ inventory_hostname) | quote }} --type headless
+    command: >-
+      VBoxManage startvm
+      {{ ('windoze-' ~ inventory_hostname) | quote }}
+      --type {{ headless | ternary('headless', 'separate') }}

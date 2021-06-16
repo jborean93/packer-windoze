@@ -1,13 +1,55 @@
+- name: wait until VM is powered off
+  shell: |
+    until $(VBoxManage showvminfo --machinereadable {{ ('windoze-' ~ inventory_hostname) | quote }} | grep -q ^VMState=.poweroff.)
+    do
+      sleep 1
+    done
+  changed_when: False
+
+- name: detach all dvd drives
+  command: >-
+    VBoxManage storageattach
+    {{ ('windoze-' ~ inventory_hostname) | quote }}
+    --storagectl SATA
+    --device 0
+    --port {{ item }}
+    --medium none
+  register: detach_disk
+  changed_when: detach_disk.rc == 0
+  failed_when:
+  - detach_disk.rc == 1
+  - '"VBOX_E_OBJECT_NOT_FOUND" not in detach_disk.stderr'
+  loop: '{{ range(1, 5) | list }}'
+
+- name: change port count of storage controller
+  command: >-
+    VBoxManage storagectl
+    {{ ('windoze-' ~ inventory_hostname) | quote }}
+    --name SATA
+    --portcount 1
+
+- name: export VM ovf
+  command: >-
+    VBoxManage export
+    {{ ('windoze-' ~ inventory_hostname) | quote }}
+    --output {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/vbox/box.ovf' )}}
+  args:
+    creates: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vbox/box.ovf'
+
+- name: remove VM
+  command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
+
+- name: copy box files
+  copy:
+    src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vbox/{{ item }}'
+    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/box/{{ item }}'
+    remote_src:
+  register: box_img
+  loop:
+  - box-disk001.vmdk
+  - box.ovf
+
 - name: build box metadata
   set_fact:
     box_metadata:
       provider: virtualbox
-
-- set_fact:
-    test: |
-      VBoxManage: []string{"storageattach", "packer-virtualbox-iso-1623702757", "--storagectl", "IDE Controller", "--port", "0", "--device", "1", "--type", "dvddrive", "--medium", "none"}
-      VBoxManage: []string{"storageattach", "packer-virtualbox-iso-1623702757", "--storagectl", "IDE Controller", "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "none"}
-      VBoxManage: []string{"storagectl", "packer-virtualbox-iso-1623702757", "--name", "Sata Controller", "--remove"}
-      VBoxManage: []string{"modifyvm", "packer-virtualbox-iso-1623702757", "--natpf1", "delete", "packercomm"}
-      VBoxManage: []string{"export", "packer-virtualbox-iso-1623702757", "--output", "output-virtualbox-iso/packer-virtualbox-iso-1623702757.ovf"}
-      VBoxManage: []string{"unregistervm", "packer-virtualbox-iso-1623702757", "--delete"}

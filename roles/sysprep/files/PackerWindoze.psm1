@@ -291,8 +291,8 @@ Function Reset-WinRMConfig {
         ScriptBlock = { $env:COMPUTERNAME }
         SessionOption = (New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck)
     }
-    Invoke-Command @$invokeArgs > $null
-    Invoke-Command -UseSSL @$invokeArgs > $null
+    Invoke-Command @invokeArgs > $null
+    Invoke-Command -UseSSL @invokeArgs > $null
 
     Write-Verbose -Message "WinRM and PS Remoting have been set up successfully"
 }
