@@ -1,0 +1,4 @@
+- fail:
+    msg: TODO
+
+# https://github.com/hashicorp/packer/blob/04d5276040c3f4b84a018f672916cac80b0b6ebe/common/powershell/hyperv/hyperv.go#L629

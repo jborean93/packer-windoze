@@ -14,7 +14,7 @@
     qemu-img convert
     -c
     -O qcow2
-    {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
+    {{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
     {{ (box_path ~ '/box.img') | quote }}
   register: box_img
   args:

@@ -185,7 +185,7 @@ $bootstrapActions = @(
 )
 
 $foundAction = $false
-$actualActions = foreach ($bootstrapAction in $bootStrapActions) {
+$actualActions = @(foreach ($bootstrapAction in $bootStrapActions) {
     if (-not $Action -or $foundAction) {
         $bootstrapAction
     }
@@ -193,7 +193,7 @@ $actualActions = foreach ($bootstrapAction in $bootStrapActions) {
         $foundAction = $true
         $bootstrapAction
     }
-}
+})
 
 for ($i = 0; $i -lt $actualActions.Count; $i++) {
     $currentAction = $actualActions[$i]
@@ -309,6 +309,21 @@ namespace PackerWindoze
             Get-NetAdapter |
                 Where-Object DriverFileName -eq 'netkvm.sys' |
                 Set-NetAdapterAdvancedProperty -RegistryKeyword 'Offload.TxChecksum' -RegistryValue 0
+
+{% endif %}
+{% if platform == 'hyperv' %}
+            $ipAddr = '172.16.41.{{ 2 + (groups["setup"].index(inventory_hostname)) }}'
+            Write-Log -Message "Setting IP address to $ipAddr"
+
+            $ipParams = @{
+                IPAddress = $ipAddr
+                PrefixLength = 24
+                DefaultGateway = '172.16.41.1'
+            }
+            Get-NetAdapter | ForEach-Object {
+                $_ | New-NetIPAddress @ipParams
+                $_ | Set-DnsClientServerAddress -ServerAddresses ('1.1.1.1')
+            }
 
 {% endif %}
             Write-Log -Message "Configuring WinRM listener to work over 5985 with Basic auth"

@@ -11,18 +11,18 @@
 - name: start VM if not already running
   when: force or qemu_pid.pids | length == 0
   block:
-  - name: enesure older artifacts are removed
+  - name: ensure older artifacts are removed
     file:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
+      path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
       state: absent
     loop:
     - qemu
     - box
-    - vagrant.box
+    - qemu.box
 
   - name: create QEMU build dir
     file:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/qemu'
+      path: '{{ output_dir }}/{{ inventory_hostname }}/qemu'
       state: directory
 
   - name: create QEMU hdd image
@@ -30,7 +30,7 @@
       qemu-img create
       -f qcow2
       -o preallocation=metadata
-      {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
+      {{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
       40960M
 
   - name: start up QEMU VM
@@ -52,7 +52,7 @@
       -device virtio-net,netdev=user0
       -drive file={{ iso_src | quote }},index=0,media=cdrom
       -drive file={{ secondary_iso_src | quote }},index=1,media=cdrom
-      -drive file={{ (playbook_dir ~ '/output/common/virtio-win.iso') | quote }},index=2,media=cdrom
-      -drive file={{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
+      -drive file={{ (output_dir ~ '/common/virtio-win.iso') | quote }},index=2,media=cdrom
+      -drive file={{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
       -boot once=d
       -daemonize

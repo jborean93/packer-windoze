@@ -33,7 +33,7 @@
   # Common
   - name: remove any provider specific build artifacts
     file:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
+      path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
       state: absent
     loop:
     - vbox

@@ -9,7 +9,7 @@
 - name: download VirtualBox guest additions ISO
   get_url:
     url: https://download.virtualbox.org/virtualbox/{{ vbox_version }}/VBoxGuestAdditions_{{ vbox_version }}.iso
-    dest: '{{ playbook_dir }}/output/common/VBoxGuestAdditions.iso'
+    dest: '{{ output_dir }}/common/VBoxGuestAdditions.iso'
   run_once: True
 
 - name: check if VM is registered
@@ -33,7 +33,7 @@
 
   - name: remove existing VM artifacts
     file:
-      path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
+      path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
       state: absent
     loop:
     - vbox
@@ -43,7 +43,7 @@
   - name: register VM hdd
     shell: >-
       VBoxManage createmedium disk
-      --filename {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/vbox/' ~ inventory_hostname ~ '-vm.vdi') | quote }}
+      --filename {{ (output_dir ~ '/' ~ inventory_hostname ~ '/vbox/' ~ inventory_hostname ~ '-vm.vdi') | quote }}
       --size 40960
       --format VDI
       --variant Standard
@@ -51,13 +51,13 @@
   - name: template VirtualBox VM config
     template:
       src: VirtualBox.vbox.tmpl
-      dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vbox/vm.vbox'
+      dest: '{{ output_dir }}/{{ inventory_hostname }}/vbox/vm.vbox'
     vars:
       vbox_uuid: '{{ inventory_hostname | to_uuid }}'
       vbox_name: windoze-{{ inventory_hostname }}
 
   - name: register VM
-    command: VBoxManage registervm {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/vbox/vm.vbox') | quote }}
+    command: VBoxManage registervm {{ (output_dir ~ '/' ~ inventory_hostname ~ '/vbox/vm.vbox') | quote }}
 
   - name: randomize MAC address
     command: VBoxManage modifyvm {{ ('windoze-' ~ inventory_hostname) | quote }} --macaddress1 auto
@@ -72,15 +72,15 @@
       --type {{ item.type }}
       --medium {{ item.path | quote }}
     loop:
-    - path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vbox/{{ inventory_hostname }}-vm.vdi'
+    - path: '{{ output_dir }}/{{ inventory_hostname }}/vbox/{{ inventory_hostname }}-vm.vdi'
       type: hdd
     - path: '{{ iso_src }}'
       type: dvddrive
     - path: '{{ secondary_iso_src }}'
       type: dvddrive
-    - path: '{{ playbook_dir }}/output/common/virtio-win.iso'
+    - path: '{{ output_dir }}/common/virtio-win.iso'
       type: dvddrive
-    - path: '{{ playbook_dir }}/output/common/VBoxGuestAdditions.iso'
+    - path: '{{ output_dir }}/common/VBoxGuestAdditions.iso'
       type: dvddrive
     loop_control:
       index_var: idx

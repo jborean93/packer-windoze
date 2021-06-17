@@ -108,6 +108,7 @@ all:
         ansible_become_user: SYSTEM
 
   vars:
+    output_dir: '{{ playbook_dir }}/output'
     platform: qemu
     openssh_version: V8.6.0.0p1-Beta
     virtio_version: 0.1.185-2

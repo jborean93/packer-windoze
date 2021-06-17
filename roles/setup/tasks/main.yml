@@ -33,38 +33,38 @@
 
 - name: create common build directory
   file:
-    path: '{{ playbook_dir }}/output/common'
+    path: '{{ output_dir }}/common'
     state: directory
   run_once: True
 
 - name: download latest Microsoft code verification root certificate for older hosts
   get_url:
     url: https://www.microsoft.com/pki/certs/MicrosoftCodeVerifRoot.crt
-    dest: '{{ playbook_dir }}/output/common/MicrosoftCodeVerifRoot.crt'
+    dest: '{{ output_dir }}/common/MicrosoftCodeVerifRoot.crt'
   register: verif_root_cert
   run_once: True
 
 - name: download Virtio ISO
   get_url:
     url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-{{ virtio_version }}/virtio-win.iso
-    dest: '{{ playbook_dir }}/output/common/virtio-win.iso'
+    dest: '{{ output_dir }}/common/virtio-win.iso'
   when: platform != 'hyperv'
   run_once: True
 
 - name: create host specific build directory
   file:
-    path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso'
+    path: '{{ output_dir }}/{{ inventory_hostname }}/iso'
     state: directory
 
 - name: template out the description for the box
   template:
     src: description.md.tmpl
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/description.md'
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/description.md'
 
 - name: download WMFv3 hotfix for Server 2012
   get_url:
     url: https://s3.amazonaws.com/ansible-ci-files/hotfixes/KB2842230/463941_intl_x64_zip.exe
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/KB2842230-wmfv3.zip'
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/iso/KB2842230-wmfv3.zip'
   register: wmf3_hotfix
   when: inventory_hostname == '2012'
 
@@ -85,7 +85,7 @@
 - name: download the latest updates found
   get_url:
     url: '{{ item[0].url }}'
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item[0].kb }}.msu'
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/iso/{{ item[0].kb }}.msu'
   register: downloaded_updates
   when: item | length > 0
   loop: '{{ update_information.updates }}'
@@ -111,7 +111,7 @@
 - name: create Autounattend.xml file
   template:
     src: '{{ item }}.tmpl'
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/iso/{{ item }}'
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/iso/{{ item }}'
     newline_sequence: \r\n
   register: iso_template_files
   loop:
@@ -120,7 +120,7 @@
 
 - name: set secondary iso path fact
   set_fact:
-    secondary_iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ inventory_hostname }}-secondary.iso'
+    secondary_iso_src: '{{ output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}-secondary.iso'
 
 - name: create secondary iso
   command: >-
@@ -128,8 +128,8 @@
     -input-charset iso8859-1
     -quiet
     -o {{ secondary_iso_src | quote }}
-    {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/iso') | quote }}
-    {{ (playbook_dir ~ '/output/common/MicrosoftCodeVerifRoot.crt') | quote }}
+    {{ (output_dir ~ '/' ~ inventory_hostname ~ '/iso') | quote }}
+    {{ (output_dir ~ '/common/MicrosoftCodeVerifRoot.crt') | quote }}
   when: >-
     verif_root_cert is changed or
     (inventory_hostname == '2012' and wmf3_hotfix is changed) or
@@ -140,16 +140,17 @@
   - name: download Windows ISO
     get_url:
       url: '{{ iso_src }}'
-      dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ inventory_hostname }}-windows.iso'
+      dest: '{{ output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}-windows.iso'
       checksum: '{{ iso_checksum | default(omit, True) }}'
 
   - set_fact:
-      iso_src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ inventory_hostname }}-windows.iso'
+      iso_src: '{{ output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}-windows.iso'
 
   when: iso_src.startswith('http') or iso_src.startswith('https')
 
 - name: determine port to forward onto VM guest
   set_fact:
+    guest_host: 127.0.0.1
     guest_port: '{{ 29500 + (groups["setup"].index(inventory_hostname) * 2) }}'
 
 - name: start build VM
@@ -158,7 +159,7 @@
 - name: add Windows host to host list
   add_host:
     name: 'win-{{ inventory_hostname }}'
-    ansible_host: 127.0.0.1
+    ansible_host: '{{ guest_host }}'
     ansible_port: '{{ guest_port }}'
     windoze_version: '{{ changelog[0].version }}'
     platform: '{{ platform }}'

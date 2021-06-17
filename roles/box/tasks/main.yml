@@ -1,5 +1,5 @@
 - set_fact:
-    box_path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/box'
+    box_path: '{{ output_dir }}/{{ inventory_hostname }}/box'
 
 - name: create box folder
   file:
@@ -17,7 +17,7 @@
 
 - name: remove build artifacts
   file:
-    path: '{{ playbook_dir }}/output/{{ inventory_hostname }}/{{ item }}'
+    path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
     state: absent
   loop:
   - qemu

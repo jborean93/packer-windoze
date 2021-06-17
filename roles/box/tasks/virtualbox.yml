@@ -32,17 +32,17 @@
   command: >-
     VBoxManage export
     {{ ('windoze-' ~ inventory_hostname) | quote }}
-    --output {{ (playbook_dir ~ '/output/' ~ inventory_hostname ~ '/vbox/box.ovf' )}}
+    --output {{ (output_dir ~ '/' ~ inventory_hostname ~ '/vbox/box.ovf' )}}
   args:
-    creates: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vbox/box.ovf'
+    creates: '{{ output_dir }}/{{ inventory_hostname }}/vbox/box.ovf'
 
 - name: remove VM
   command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
 
 - name: copy box files
   copy:
-    src: '{{ playbook_dir }}/output/{{ inventory_hostname }}/vbox/{{ item }}'
-    dest: '{{ playbook_dir }}/output/{{ inventory_hostname }}/box/{{ item }}'
+    src: '{{ output_dir }}/{{ inventory_hostname }}/vbox/{{ item }}'
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/box/{{ item }}'
     remote_src:
   register: box_img
   loop:
