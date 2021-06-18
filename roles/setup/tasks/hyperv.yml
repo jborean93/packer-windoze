@@ -1,26 +1,3 @@
-- name: create Hyper-V switch
-  shell: |
-    $ProgressPreference = 'SilentlyContinue'
-
-    $switchName = 'Windoze'
-    if (Get-VMSwitch -Name $switchName -ErrorAction SilentlyContinue) {
-        $false
-    }
-    else {
-        $switch = New-VMSwitch -SwitchName $switchName -SwitchType Internal
-        $vmAdapter = Get-VMNetworkAdapter -ManagementOS -SwitchName $switchName
-        $netAdapter = Get-NetAdapter | Where-Object { $_.DeviceId -eq $vmAdapter.DeviceId }
-        $netAdapter | New-NetIPAddress -IPAddress 172.16.41.1 -PrefixLength 24 | Out-Null
-        New-NetNat -Name WindozeNATNetwork -InternalIPInterfaceAddressPrefix 172.16.41.0/24 | Out-Null
-
-        $true
-    }
-  args:
-    executable: powershell.exe
-  register: hyperv_switch
-  changed_when: hyperv_switch.stdout | trim | bool
-  run_once: True
-
 - name: check if VM is registered
   shell: |
     if (Get-VM -Name 'windoze-{{ inventory_hostname }}' -ErrorAction SilentlyContinue) { $true } else { $false }
@@ -76,7 +53,7 @@
   register: hyperv_create_info
   changed_when: (hyperv_create_info.stdout | trim | from_json).changed
 
-#- name: override guest hostname and port
-#  set_fact:
-#    guest_host: 172.16.41.{{ 2 + (groups["setup"].index(inventory_hostname)) }}
-#    guest_port: 5985
+- name: override guest hostname and port
+  set_fact:
+    guest_host: '{{ hyperv_ip }}'
+    guest_port: 5985

@@ -151,11 +151,16 @@ if (-not $vm) {
     $winIsoPath = Join-Path $PSScriptRoot 'windows.iso'
     ConvertTo-UnattendedIso -Path (Join-Path $outputPath "$windowsVersion-windows.iso") -Destination $winIsoPath
 
+    $vhdxPath = (Join-Path $PSScriptRoot "$($windowsVersion)-vm.vhdx")
+    if (Test-Path -LiteralPath $vhdxPath) {
+        Remove-Item -LiteralPath $vhdxPath -Force
+    }
+
     $vmParams = @{
         Name = $vmName
         MemoryStartupBytes = 2048MB
-        SwitchName = 'Windoze'
-        NewVHDPath = (Join-Path $PSScriptRoot "$($windowsVersion)-vm.vhdx")
+        SwitchName = 'WSL'
+        NewVHDPath = $vhdxPath
         NewVHDSizeBytes = 40GB
         Generation = 2
         Force = $true
@@ -174,7 +179,6 @@ if (-not $vm) {
     $vm | Start-VM
 }
 
-# TODO: Support headless here
 if (-not ${{ headless }}) {
     vmconnect localhost $vmName
 }
@@ -185,6 +189,8 @@ while ($true) {
         Start-Sleep -Seconds 5
     }
 
+{% if inventory_hostname not in ['2012', '2012r2'] %}
+{# Hyper-V direct only works when the target has powershell >=5 #}
     # Finally check that the host is online and ready to use
     try {
         $null = Invoke-Command -VMName $vmName -Credential $cred -ScriptBlock {
@@ -195,6 +201,7 @@ while ($true) {
         continue
     }
 
+{% endif %}
     break
 }
 

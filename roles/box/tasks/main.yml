@@ -20,6 +20,7 @@
     path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
     state: absent
   loop:
+  - hyperv
   - qemu
   - vbox
 

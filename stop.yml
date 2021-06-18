@@ -29,6 +29,29 @@
     when: vbox_vm_info.rc == 0
 
   # Hyper-V
+  - name: Hyper-V - stop VM and remove VM
+    shell: |
+      $changed = $false
+      $vmName = 'windoze-{{ inventory_hostname }}'
+      $vm = Get-VM -Name $vmName -ErrorAction SilentlyContinue
+      if ($vm) {
+          $changed = $true
+          if ($vm.State -ne 'Off') {
+              $vm | Stop-VM -TurnOff
+
+              while ((Get-VM -Name $vmName).State -ne 'Off') {
+                  Start-Sleep -Seconds 1
+              }
+          }
+
+          $vm | Remove-VM -Force
+      }
+
+      $changed
+    args:
+      executable: powershell.exe
+    register: hyperv_vm
+    changed_when: hyperv_vm.stdout | trim | bool
 
   # Common
   - name: remove any provider specific build artifacts
@@ -36,5 +59,6 @@
       path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
       state: absent
     loop:
+    - hyperv
     - vbox
     - qemu

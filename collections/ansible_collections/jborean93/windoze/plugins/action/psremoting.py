@@ -16,13 +16,6 @@ from typing import (
 
 display = Display()
 
-_GET_SCRIPT = r'''[CmdletBinding(SupportsShouldProcess)]
-param ()
-
-$Ansible.Changed = $false
-Get-PSSessionConfiguration -Name PowerShell.* -ErrorAction SilentlyContinue
-'''
-
 
 class ActionModule(ActionBase):
 
@@ -31,15 +24,14 @@ class ActionModule(ActionBase):
         self._supports_async = False
 
         result = self._execute_module(
-            module_name='ansible.windows.win_powershell',
+            module_name='ansible.windows.win_shell',
             module_args={
-                'script': _GET_SCRIPT,
+                '_raw_params': 'Get-PSSessionConfiguration -Name PowerShell.* -ErrorAction SilentlyContinue',
                 'executable': 'pwsh',
-                'depth': 1,
             },
             task_vars=task_vars,
         )
-        if result['output'] != []:
+        if result['stdout'].strip():
             return {'changed': False}
 
         res = {'changed': True}
@@ -52,12 +44,10 @@ class ActionModule(ActionBase):
         self._task.async_val = 60
         self._task.poll = 5
         async_result = self._execute_module(
-            module_name='ansible.windows.win_powershell',
+            module_name='ansible.windows.win_shell',
             module_args={
-                'script': 'Enable-PSRemoting -Force',
-                'error_action': 'stop',
+                '_raw_params': '$ErrorActionPrefence = "Stop"; Enable-PSRemoting -Force',
                 'executable': 'pwsh',
-                'depth': 1,
             },
             task_vars=task_vars,
         )

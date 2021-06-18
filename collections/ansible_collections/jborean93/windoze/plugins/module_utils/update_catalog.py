@@ -275,14 +275,3 @@ def get_client() -> httpx.AsyncClient:
         'User-Agent': 'packet-windoze',
     }
     return httpx.AsyncClient(headers=headers, timeout=30, transport=transport)
-
-
-async def main():
-    async with get_client() as client:
-        async for update in get_updates(client, 'Cumulative Update for Windows Server 2019', sort='Last Updated'):
-            print(update)
-            a = ''
-
-
-if __name__ == '__main__':
-    asyncio.run(main())

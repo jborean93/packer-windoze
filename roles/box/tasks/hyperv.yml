@@ -1,4 +1,52 @@
-- fail:
-    msg: TODO
+- name: wait until VM is powered off
+  shell: |
+    while ((Get-VM -Name 'windoze-{{ inventory_hostname }}').State -ne 'Off') {
+        Start-Sleep -Seconds 1
+    }
+  args:
+    executable: powershell.exe
+  changed_when: False
 
-# https://github.com/hashicorp/packer/blob/04d5276040c3f4b84a018f672916cac80b0b6ebe/common/powershell/hyperv/hyperv.go#L629
+- name: build box metadata
+  set_fact:
+    box_metadata:
+      provider: hyperv
+
+- name: get Windows path for the Hyper-V box path
+  command: wslpath -w {{ (output_dir ~ '/' ~ inventory_hostname ~ '/box') | quote }}
+  changed_when: False
+  register: hyperv_output_path
+
+- name: export VM
+  shell: |
+    $outPath = '{{ hyperv_output_path.stdout | trim }}'
+    $vmName = 'windoze-{{ inventory_hostname }}'
+    $exportPath = Join-Path $outPath $vmName
+
+    $vm = Get-VM -Name $vmName
+    $vm | Get-VMDvdDrive | Remove-VMDvdDrive
+    $vm | Set-VMFirmware -BootOrder $vm.HardDrives[0]
+    $vm | Export-VM -Path $outPath
+
+    Remove-Item -Path (Join-Path $exportPath 'Snapshots') -Force -Recurse
+    Move-Item -Path (Join-Path $exportPath '*') -Destination $outPath -Force
+    Remove-Item -Path $exportPath -Force -Recurse
+  register: box_img
+  args:
+    creates: '{{ output_dir }}/{{ inventory_hostname }}/box/Virtual Hard Disks'
+    executable: powershell.exe
+
+- name: remove VM
+  shell: |
+    $vm = Get-VM -Name 'windoze-{{ inventory_hostname }}' -ErrorAction SilentlyContinue
+    if ($vm) {
+        $vm | Remove-VM -Force
+        $true
+    }
+    else {
+        $false
+    }
+  register: vm_remove
+  changed_when: vm_remove.stdout | trim | bool
+  args:
+    executable: powershell.exe

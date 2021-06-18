@@ -312,17 +312,17 @@ namespace PackerWindoze
 
 {% endif %}
 {% if platform == 'hyperv' %}
-            $ipAddr = '172.16.41.{{ 2 + (groups["setup"].index(inventory_hostname)) }}'
+            $ipAddr = '{{ hyperv_ip }}'
             Write-Log -Message "Setting IP address to $ipAddr"
 
             $ipParams = @{
                 IPAddress = $ipAddr
-                PrefixLength = 24
-                DefaultGateway = '172.16.41.1'
+                PrefixLength = {{ hyperv_ip_prefix }}
+                DefaultGateway = '{{ hyperv_gateway }}'
             }
             Get-NetAdapter | ForEach-Object {
-                $_ | New-NetIPAddress @ipParams
-                $_ | Set-DnsClientServerAddress -ServerAddresses ('1.1.1.1')
+                $null = $_ | New-NetIPAddress @ipParams
+                $null = $_ | Set-DnsClientServerAddress -ServerAddresses ('1.1.1.1')
             }
 
 {% endif %}

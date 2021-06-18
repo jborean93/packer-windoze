@@ -127,7 +127,7 @@
     win_shell: |
       $pwsh = Get-Command -Name pwsh.exe -CommandType Application -ErrorAction SilentlyContinue
       if ($pwsh) {
-          (New-Object -ComObject Scripting.FileSystemObject).GetFile($pwsh.Source).ShortPath
+          (New-Object -ComObject Scripting.FileSystemObject).GetFile($pwsh.Path).ShortPath
       }
     register: pri_personalize_pwsh_path
     retries: 5  # Found intermittent errors here, just try a few times - might need to replace the COM side.

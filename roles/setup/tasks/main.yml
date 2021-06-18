@@ -1,3 +1,22 @@
+# Hyper-V needs to set a static IP on the interface as part of the bootstrap script. These steps determine the
+# current network settings and what IP/Gateway to set the VM as.
+- name: get WSL2 IP settings
+  set_fact:
+    hyperv_current_ip: '{{ lookup("jborean93.windoze.ip_info") }}'
+  when: platform == 'hyperv'
+
+- name: get Hyper-V IP settings
+  set_fact:
+    hyperv_ip: >-
+      {{
+          hyperv_current_ip.ip | jborean93.windoze.ip_addr(
+              [hyperv_current_ip.gateway], 0 + groups["setup"].index(inventory_hostname)
+          )
+      }}
+    hyperv_ip_prefix: '{{ hyperv_current_ip.prefixlen }}'
+    hyperv_gateway: '{{ hyperv_current_ip.gateway }}'
+  when: platform == 'hyperv'
+
 - name: process host specific overrides
   set_fact:
     iso_src: '{{ hostvars[inventory_hostname]["iso_src_" ~ inventory_hostname] | default(iso_src) }}'

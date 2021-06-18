@@ -10,19 +10,21 @@ Vagrant.configure(2) do |config|
   config.vm.network :forwarded_port, guest: 3389, host: 3389, id: 'rdp', auto_correct: true
   config.vm.network :forwarded_port, guest: 22, host: 2222, id: 'ssh', auto_correct: true
 
-{% if platform == 'qemu' %}
-  # Disable rsync with libvirt as it's not compatible with Windows
+{% if platform in ['hyperv', 'qemu'] %}
+{# Not compatible with libvirt/qemu and Hyper-V always prompts for creds #}
   config.vm.synced_folder ".", "/vagrant", disabled: true
 {% endif %}
   config.vm.provider "virtualbox" do |vb|
     vb.cpus = 2
     vb.default_nic_type = "virtio"
     vb.gui = false
+    vb.linked_clone = true
     vb.memory = 2048
   end
 
   config.vm.provider "hyperv" do |h|
     h.cpus = 2
+    h.linked_clone = true
     h.memory = 2048
   end
 
