@@ -6,7 +6,7 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
-### v1.0.0 - TBD
+### v1.0.0 - 2021-06-19
 
 * Removed Packer as part of the build process, this runs using Ansible only.
 * Removed the Server 2008 and 2008 R2 builds as they are end of life.

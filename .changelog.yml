@@ -1,7 +1,7 @@
 # This generates CHANGELOG.md and changelog entries in the box description
 changelog:
 - version: '1.0.0'
-  date: TBD
+  date: 2021-06-19
   changes:
   - Removed Packer as part of the build process, this runs using Ansible only.
   - Removed the Server 2008 and 2008 R2 builds as they are end of life.
