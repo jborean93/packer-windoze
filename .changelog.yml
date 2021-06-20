@@ -1,0 +1,106 @@
+# This generates CHANGELOG.md and changelog entries in the box description
+changelog:
+- version: '1.0.0'
+  date: 2021-06-19
+  changes:
+  - Removed Packer as part of the build process, this runs using Ansible only.
+  - Removed the Server 2008 and 2008 R2 builds as they are end of life.
+  - Disabled shutdown tracker UI by default.
+  - Added Server 2022 based on the latest preview ISO on the evaluation centre.
+  - Added `pwsh` to the image and configured PSRemoting of `pwsh` for both SSH and WinRM.
+  - Recreate RDP certificate to use SHA256 as SHA1 is being deprecated.
+  - Enable a few Hyper-V features for the default QEMU/Libvirt Vagrantfile.
+  - Updated OpenSSH version to [v8.6.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/V8.6.0.0p1-Beta).
+  - Updated VirtIO driver version to `0.1.185`.
+  - Raised minimum Ansible version to `2.9.0`.
+  host_specific_changes:
+    '2022':
+    - New build added in this version
+
+- version: '0.7.0'
+  date: 2019-12-20
+  changes:
+  - Added `qemu/libvirt` boxes and default template to use VirtIO drivers for better performance
+  - Pin the VirtIO driver version to a specific version that can be manually updated across version. Currently at the latest stable version of `0.1.171`.
+  - Updated OpenSSH version to [v8.0.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.0.0.0p1-Beta)
+  - Raised minimum Ansible version to `2.7.0`.
+  - Swapped the connection plugin from `winrm` to `psrp` for faster builds. The [pypsrp](https://pypi.org/project/pypsrp/) Python library needs to be installed.
+  host_specific_changes:
+    2008-x86:
+    - Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
+    2008-x64:
+    - Enabled TLSv1.2 on the SChannel server now the patch is not faulty.
+
+- version: '0.6.0'
+  date: 2019-01-20
+  changes:
+  - Fix logic when setting the `LocalAccountTokenFilterPolicy` value when setting up the WinRM listener
+  - Added ability to override the base Chocolatey packages that are installed with the image, use the `opt_package_setup_packages` variable with `-e` when generating the template to configure
+  - Moved away from custom role to install the Win32-OpenSSH components, now using the [jborean93.win_openssh](https://galaxy.ansible.com/jborean93/win_openssh) role
+  - Updated OpenSSH version [7.9.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.9.0.0p1-Beta)
+  - Installed the [virtio-network](https://stg.fedoraproject.org/wiki/Windows_Virtio_Drivers) driver on VirtualBox images
+  host_specific_changes:
+    '2016':
+    - Changed the default Windows Explorer window to show `This PC` instead of `Quick access`
+
+- version: '0.5.0'
+  date: 2018-08-08
+  changes:
+  - Disabled automatic Windows Update to eliminate post-startup thrash on older images - https://github.com/jborean93/packer-windoze/issues/10
+  - Updated Win32-OpenSSH to the latest release [v7.7.2.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.7.2.0p1-Beta)
+  - Ensure WinRM HTTPS listener and firewall is configured before allowing Vagrant to detect the host is up - https://github.com/jborean93/packer-windoze/issues/11
+  - Run ngen before sysprep process to try and speed up the Vagrant init time
+  - Clean up `C:\Windows\SoftwareDistribution\Download` and `C:\Recovery` as part of the cleanup process
+
+- version: '0.4.0'
+  date: 2018-05-16
+  changes:
+  - Create a PS Module called `PackerWindoze` that stores the `Reset-WinRMConfig` cmdlet that recreates the WinRM configuration and keep that post sysprep for downstream users to call at any time
+  - Added support for the Server 1803 image
+  - Install the full sysinternals suite instead of just PsTools, ProcMon, and ProcExp
+  - Fixed issue where the WinRM HTTPS firewall rule was not created after sysprep
+  - Fixed issue where WinRM still allowed unencrypted data after sysprep
+
+- version: '0.3.0'
+  date: 2018-05-10
+  changes:
+  - Updated OpenSSH version to [v7.6.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v7.6.1.0p1-Beta)
+  - Set the builtin `vagrant` account password to never expire
+  - Stop using the Ansible ConfigureRemotingForAnsible.ps1 script, swap over to custom script to support SHA256 and simplify steps
+  - Added Hyper-V builder support by specifying `-e opt_packer_setup_builder=hyperv` - This will only run on a Windows with WSL host and doesn't work for Server 2008
+  host_specific_changes:
+    2008-x64:
+    - Enabled TLSv1.2 client support, server is still disabled by default
+    2008-x86:
+    - Enabled TLSv1.2 client support, server is still disabled by default
+
+- version: '0.2.0'
+  date: 2017-12-01
+  changes:
+  - Create a custom Vagrantfile template for the final image that includes the username and other required settings
+  - Moved sysprep process before the image is created
+  - Added `slmgr.vbs /rearm` to run just after Vagrant starts the image to get the full evaluation period possible
+  - Removed SSL certificates that were created during the packer build process
+  - Installed [Win32-OpenSSH](https://github.com/PowerShell/Win32-OpenSSH) v0.0.23.0 on all images eacept Server 2008
+  - Added .travis-ci file to run [ansible-lint](https://github.com/willthames/ansible-lint) on the Ansible files for some testing sanity
+  - Decided to install the VirtualBox guest additions tools as part fo the build process
+  - Added vim to the list of chocolatey packages to help with Core OS installs or connecting via SSH
+  host_specific_changes:
+    '1709':
+    - Added support for Windows Server 1709
+    - This won't be available in Vagrant Cloud as it is not avaible as a public evaluation ISO
+    '2016':
+    - Will not remove Features on Demand until [this](https://social.msdn.microsoft.com/Forums/en-US/2ad1c1d9-09ba-407e-ba03-951c6f2baa34/features-on-demand-server-2016-source-not-found?forum=ws2016) is resolved
+    2008r2:
+    - Enabled TLSv1.2 cipher support for both the client and server components
+    2008-x64:
+    - Disabled screensaver to stop auto logoff by default
+    - Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
+    2008-x86:
+    - Disabled screensaver to stop auto logoff by default
+    - Ensure TLSv1.2 cipher support KB is installed but not enabled due to bug in the server implementation
+
+- version: '0.0.1'
+  date: 2017-10-29
+  changes:
+  - First images built by this process

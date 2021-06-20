@@ -1,0 +1,55 @@
+- name: wait until VM is powered off
+  shell: |
+    until $(VBoxManage showvminfo --machinereadable {{ ('windoze-' ~ inventory_hostname) | quote }} | grep -q ^VMState=.poweroff.)
+    do
+      sleep 1
+    done
+  changed_when: False
+
+- name: detach all dvd drives
+  command: >-
+    VBoxManage storageattach
+    {{ ('windoze-' ~ inventory_hostname) | quote }}
+    --storagectl SATA
+    --device 0
+    --port {{ item }}
+    --medium none
+  register: detach_disk
+  changed_when: detach_disk.rc == 0
+  failed_when:
+  - detach_disk.rc == 1
+  - '"VBOX_E_OBJECT_NOT_FOUND" not in detach_disk.stderr'
+  loop: '{{ range(1, 5) | list }}'
+
+- name: change port count of storage controller
+  command: >-
+    VBoxManage storagectl
+    {{ ('windoze-' ~ inventory_hostname) | quote }}
+    --name SATA
+    --portcount 1
+
+- name: export VM ovf
+  command: >-
+    VBoxManage export
+    {{ ('windoze-' ~ inventory_hostname) | quote }}
+    --output {{ (output_dir ~ '/' ~ inventory_hostname ~ '/vbox/box.ovf' )}}
+  args:
+    creates: '{{ output_dir }}/{{ inventory_hostname }}/vbox/box.ovf'
+
+- name: remove VM
+  command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
+
+- name: copy box files
+  copy:
+    src: '{{ output_dir }}/{{ inventory_hostname }}/vbox/{{ item }}'
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/box/{{ item }}'
+    remote_src:
+  register: box_img
+  loop:
+  - box-disk001.vmdk
+  - box.ovf
+
+- name: build box metadata
+  set_fact:
+    box_metadata:
+      provider: virtualbox

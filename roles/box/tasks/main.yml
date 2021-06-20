@@ -1,0 +1,46 @@
+- set_fact:
+    box_path: '{{ output_dir }}/{{ inventory_hostname }}/box'
+
+- name: create box folder
+  file:
+    path: '{{ box_path }}'
+    state: directory
+
+- name: template Vagrantfile
+  template:
+    src: Vagrantfile.tmpl
+    dest: '{{ box_path }}/Vagrantfile'
+  register: box_template
+
+- name: prepare provider specific box contents
+  include_tasks: '{{ platform }}.yml'
+
+- name: remove build artifacts
+  file:
+    path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
+    state: absent
+  loop:
+  - hyperv
+  - qemu
+  - vbox
+
+- name: create metadata.json
+  copy:
+    content: '{{ box_metadata | to_json }}'
+    dest: '{{ box_path }}/metadata.json'
+  register: box_metadata
+
+- name: create box
+  shell: >-
+    tar
+    --create
+    --verbose
+    --sparse
+    ./*
+    | pigz --best -c > ../{{ platform }}.box
+  args:
+    chdir: '{{ box_path }}'
+  when: >-
+    box_template is changed or
+    box_img is changed or
+    box_metadata is changed

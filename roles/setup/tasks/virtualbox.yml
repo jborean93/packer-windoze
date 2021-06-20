@@ -1,0 +1,92 @@
+- name: get VirtualBox version
+  command: VBoxManage --version
+  changed_when: False
+  register: vbox_version
+
+- set_fact:
+    vbox_version: '{{ (vbox_version.stdout | trim | regex_search("^((\d)+\.(\d)+.(\d)+)", "\1"))[0] }}'
+
+- name: download VirtualBox guest additions ISO
+  get_url:
+    url: https://download.virtualbox.org/virtualbox/{{ vbox_version }}/VBoxGuestAdditions_{{ vbox_version }}.iso
+    dest: '{{ output_dir }}/common/VBoxGuestAdditions.iso'
+  run_once: True
+
+- name: check if VM is registered
+  command: VBoxManage showvminfo windoze-{{ inventory_hostname }}
+  register: vbox_vm_info
+  changed_when: False
+  failed_when:
+  - vbox_vm_info.rc != 0
+  - '"VBOX_E_OBJECT_NOT_FOUND" not in vbox_vm_info.stderr'
+
+- name: register and run vm
+  when: force or vbox_vm_info.rc == 1
+  block:
+  - name: stop existing VM
+    command: VBoxManage controlvm {{ ('windoze-' ~ inventory_hostname) | quote }} poweroff
+    when: '"running" in vbox_vm_info.stdout'
+
+  - name: remove existing VM
+    command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
+    when: vbox_vm_info.rc == 0
+
+  - name: remove existing VM artifacts
+    file:
+      path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
+      state: absent
+    loop:
+    - vbox
+    - box
+    - vagrant.box
+
+  - name: register VM hdd
+    shell: >-
+      VBoxManage createmedium disk
+      --filename {{ (output_dir ~ '/' ~ inventory_hostname ~ '/vbox/' ~ inventory_hostname ~ '-vm.vdi') | quote }}
+      --size 40960
+      --format VDI
+      --variant Standard
+
+  - name: template VirtualBox VM config
+    template:
+      src: VirtualBox.vbox.tmpl
+      dest: '{{ output_dir }}/{{ inventory_hostname }}/vbox/vm.vbox'
+    vars:
+      vbox_uuid: '{{ inventory_hostname | to_uuid }}'
+      vbox_name: windoze-{{ inventory_hostname }}
+
+  - name: register VM
+    command: VBoxManage registervm {{ (output_dir ~ '/' ~ inventory_hostname ~ '/vbox/vm.vbox') | quote }}
+
+  - name: randomize MAC address
+    command: VBoxManage modifyvm {{ ('windoze-' ~ inventory_hostname) | quote }} --macaddress1 auto
+
+  - name: attach drives
+    command: >-
+      VBoxManage storageattach
+      windoze-{{ inventory_hostname }}
+      --storagectl SATA
+      --device 0
+      --port {{ idx }}
+      --type {{ item.type }}
+      --medium {{ item.path | quote }}
+    loop:
+    - path: '{{ output_dir }}/{{ inventory_hostname }}/vbox/{{ inventory_hostname }}-vm.vdi'
+      type: hdd
+    - path: '{{ iso_src }}'
+      type: dvddrive
+    - path: '{{ secondary_iso_src }}'
+      type: dvddrive
+    - path: '{{ output_dir }}/common/virtio-win.iso'
+      type: dvddrive
+    - path: '{{ output_dir }}/common/VBoxGuestAdditions.iso'
+      type: dvddrive
+    loop_control:
+      index_var: idx
+
+  - name: start VM
+    command: >-
+      VBoxManage startvm
+      {{ ('windoze-' ~ inventory_hostname) | quote }}
+      --type {{ headless | ternary('headless', 'separate') }}

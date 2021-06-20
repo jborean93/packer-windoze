@@ -1,0 +1,364 @@
+[CmdletBinding()]
+param (
+    [String]
+    $Action = ''
+)
+
+$ErrorActionPreference = 'Stop'
+
+trap {
+    $msg = "Unhandled exception`r`rn$($_ | Out-String)`r`n$($_.ScriptStackTrace)"
+    Write-Log -Message $msg -Level Error
+    Write-Error -ErrorRecord $_ -ErrorAction Continue
+
+    Write-Host -NoNewLine "Press any key to continue..."
+    $null = $Host.UI.RawUI.ReadKey('NoEcho, IncludeKeyDown')
+}
+
+Function Write-Log {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [String]
+        $Message,
+
+        [ValidateSet('Info', 'Error', 'Warning')]
+        [String]
+        $Level = 'Info'
+    )
+
+    $dateStr = Get-Date -Format s
+    $msg = '{0} - {1} - {2}' -f $dateStr, $Level.ToUpper(), $Message
+    $logPath = Join-Path ([IO.Path]::GetTempPath()) 'bootstrap.log'
+
+    Write-Host $msg
+    Add-Content -LiteralPath $logPath -Value $msg
+}
+
+Function Restart-AndResume {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [String]
+        $Action
+    )
+
+    $command = '"{0}" -File "{1}" "{2}"' -f @(
+        "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe",
+        $PSCommandPath,
+        $Action
+    )
+    $regKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
+    Set-ItemProperty -Path $regKey -Name 'bootstrap' -Value $command
+
+    Write-Log -Message "Rebooting server and continuing bootstrap.ps1 with command: $command"
+    Restart-Computer -Force
+    Start-Sleep -Seconds 10
+}
+
+Function Get-VirtIODriverPath {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [String]
+        $Name
+    )
+
+    $hostKey = '{{ driver_host_string }}'
+    $architecture = $env:PROCESSOR_ARCHITECTURE
+
+    Get-PSDrive -PSProvider FileSystem | ForEach-Object -Process {
+        Get-ChildItem -LiteralPath "$($_.Root)\$Name\$hostKey\$architecture" -Filter '*.inf' -ErrorAction SilentlyContinue
+    } | Select-Object -First 1 -ExpandProperty FullName
+}
+
+Function Import-Certificate {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]
+        $Cert,
+
+        [Parameter(Mandatory)]
+        [String]
+        $Store
+    )
+
+    $installedThumbprints = @(Get-ChildItem -LiteralPath "Cert:\LocalMachine\$Store" | Select-Object -ExpandProperty Thumbprint)
+    if ($Cert.Thumbprint -notin $installedThumbprints) {
+        Write-Log -Message "Certificate $($Cert.Thumbprint) not in $Store store"
+        $storeName = [System.Security.Cryptography.X509Certificates.StoreName]$Store
+        $storeLocation = [System.Security.Cryptography.X509Certificates.Storelocation]::LocalMachine
+
+        $certStore = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $storeName, $storeLocation
+        $certStore.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+        try {
+            $certStore.Add($Cert)
+        } finally {
+            # Only .NET 4.6.2 has X509 as an IDisposable, use Close for backwards compatibility
+            $certStore.Close()
+        }
+    }
+}
+
+$tmpdir = 'C:\Windows\TEMP'
+Write-Log -Message "Starting bootstrap.ps1 with action '$Action'"
+
+$bootstrapActions = @(
+{% if inventory_hostname == '2012' %}
+{# 2012 comes with pwsh v3 which requires a once off hostfix #}
+    @{
+        Name = 'WMFv3 Memory Hotfix'
+        File = 'KB2842230-wmfv3.zip'
+        ZipFilePattern = '*KB2842230*.msu'
+        Action = 'install'
+    },
+{% endif %}
+{% for update in update_files | default([]) %}
+    @{
+        Name = '{{ update.title }}'
+        File = '{{ update.filename }}'
+        Action = 'install'
+    },
+{% endfor %}
+{% if platform in ['qemu', 'virtualbox'] %}
+    @{
+        Name = "Red Hat Virtio Network Driver"
+        Path = (Get-VirtIODriverPath -Name NetKVM)
+        Action = "driver"
+    }
+{% endif %}
+{% if platform == 'qemu' %}
+    @{
+        Name = "Red Hat Virtio SCSI driver"
+        Path = (Get-VirtIODriverPath -Name vioscsi)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio RNG driver"
+        Path = (Get-VirtIODriverPath -Name viorng)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio serial driver"
+        Path = (Get-VirtIODriverPath -Name vioserial)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio Memory Memory Balloon Driver"
+        Path = (Get-VirtIODriverPath -Name Balloon)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio pvpanic driver"
+        Path = (Get-VirtIODriverPath -Name pvpanic)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio Graphics Driver"
+        Path = (Get-VirtIODriverPath -Name qxldod)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio VIOInput driver"
+        Path = (Get-VirtIODriverPath -Name vioinput)
+        Action = "driver"
+    },
+    @{
+        Name = "Red Hat Virtio PCI serial"
+        Path = (Get-VirtIODriverPath -Name qemupciserial)
+        Action = "driver"
+    },
+{% if inventory_hostname not in ['2012', '2012r2'] %}
+{# qemufwcfg only valid for 2016+ #}
+    @{
+        Name = "Red Hat Virtio Firmware Config Driver"
+        Path = (Get-VirtIODriverPath -Name qemufwcfg)
+        Action = "driver"
+    },
+{% endif %}
+{% endif %}
+    @{
+        Name = "Configure WinRM"
+        Action = "winrm"
+    }
+)
+
+$foundAction = $false
+$actualActions = @(foreach ($bootstrapAction in $bootStrapActions) {
+    if (-not $Action -or $foundAction) {
+        $bootstrapAction
+    }
+    elseif ($bootStrapAction.Name -eq $Action) {
+        $foundAction = $true
+        $bootstrapAction
+    }
+})
+
+for ($i = 0; $i -lt $actualActions.Count; $i++) {
+    $currentAction = $actualActions[$i]
+    $nextAction = $null
+    if ($i -lt ($actualActions.Count - 1)) {
+        $nextAction = $actualActions[$i + 1]
+    }
+
+    switch ($currentAction.Action) {
+        install {
+            Write-Log -Message "Installing $($currentAction.Name)"
+            $null = Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+            $src = Join-Path $PSScriptRoot $currentAction.File
+
+            if ($src.EndsWith('.zip', 'OrdinalIgnoreCase') -and $currentAction.ZipFilePattern) {
+                [System.IO.Compression.ZipFile]::ExtractToDirectory($src, $tmpdir)
+
+                $src = (Get-Item -Path (Join-Path $tmpdir $currentAction.ZipFilePattern)).FullName
+                if (-not $src) {
+                    throw "Unable to find extracted file of pattern $($currentAction.ZipFilePattern) for installing $($currentAction.Name)"
+                }
+            }
+
+            $arguments = ''
+            if ($src.EndsWith('.msu', 'OrdinalIgnoreCase')) {
+                $arguments = '"{0}" /quiet /norestart' -f $src
+                $src = 'wusa.exe'
+            }
+            if ($currentAction.Arguments) {
+                if ($arguments) { $arguments += ' ' }
+                $arguments += $currentActions.Arguments
+            }
+
+            $procParams = @{
+                FilePath = $src
+                NoNewWindow = $true
+                Wait = $true
+                PassThru = $true
+            }
+            if ($arguments) {
+                $procParams.ArgumentList = $arguments
+            }
+
+            $proc = Start-Process @procParams
+            $rc = $proc.ExitCode
+            if ($rc -eq 3010) {
+                Restart-AndResume -Action $nextAction.Name
+            }
+            elseif ($rc -ne 0) {
+                throw "Failed to install $($currentAction.Name): exit code $rc"
+            }
+        }
+
+        driver {
+            Write-Log -Message "Installing driver $($currentAction.Name)"
+            Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+
+namespace PackerWindoze
+{
+    public class NativeMethods
+    {
+        [DllImport("Newdev.dll", EntryPoint = "DiInstallDriverW", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool NativeDiInstallDriverW(
+            IntPtr hwndParent,
+            string InfPath,
+            UInt32 Flags,
+            out bool NeedReboot);
+
+        public static bool DiInstallDriverW(string infPath)
+        {
+            bool needsReboot;
+            if (!NativeDiInstallDriverW(IntPtr.Zero, infPath, 0, out needsReboot))
+            {
+                int err = Marshal.GetLastWin32Error();
+                if (err != 0x00000103)  // Is returned if the driver is already present
+                    throw new Win32Exception(err);
+                else
+                    needsReboot = false;
+            }
+
+            return needsReboot;
+        }
+    }
+}
+'@
+
+            # Older hosts may not have the root Microsoft cert that has signed the VirtIO drivers installed. We
+            # manually install it so we can install the driver silently without user interaction.
+            $rootCertPath = Join-Path $PSScriptRoot 'MicrosoftCodeVerifRoot.crt'
+            $rootCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $rootCertPath
+            Import-Certificate -Cert $rootCert -Store Root
+
+            $catPath = Get-ChildItem -Path (Split-Path -Path $currentAction.Path -Parent) -Filter '*.cat' -File
+            $driverCert = (Get-AuthenticodeSignature -LiteralPath $catPath.FullName).SignerCertificate
+            if ($driverCert) {
+                Import-Certificate -Cert $driverCert -Store TrustedPublisher
+            }
+
+            $rebootRequired = [PackerWindoze.NativeMethods]::DiInstallDriverW($currentAction.Path)
+            if ($rebootRequired) {
+                Restart-AndResume -Action $nextAction.Name
+            }
+        }
+
+        winrm {
+{% if platform == 'virtualbox' and inventory_hostname == '2022' %}
+{# Bug in NetKVM for Server 2022 - https://github.com/virtio-win/kvm-guest-drivers-windows/issues/583 #}
+            Write-Log -Message "Disabling Offload Tx Checksum for NetKVM adapter"
+            Get-NetAdapter |
+                Where-Object DriverFileName -eq 'netkvm.sys' |
+                Set-NetAdapterAdvancedProperty -RegistryKeyword 'Offload.TxChecksum' -RegistryValue 0
+
+{% endif %}
+{% if platform == 'hyperv' %}
+            $ipAddr = '{{ hyperv_ip }}'
+            Write-Log -Message "Setting IP address to $ipAddr"
+
+            $ipParams = @{
+                IPAddress = $ipAddr
+                PrefixLength = {{ hyperv_ip_prefix }}
+                DefaultGateway = '{{ hyperv_gateway }}'
+            }
+            Get-NetAdapter | ForEach-Object {
+                $null = $_ | New-NetIPAddress @ipParams
+                $null = $_ | Set-DnsClientServerAddress -ServerAddresses ('1.1.1.1')
+            }
+
+{% endif %}
+            Write-Log -Message "Configuring WinRM listener to work over 5985 with Basic auth"
+            &winrm.cmd quickconfig -q
+            Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+            Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $true
+
+            $winrmService = Get-Service -Name winrm
+            if ($winrmService.Status -ne "Running") {
+                try {
+                    Start-Service -Name winrm
+                } catch {
+                    throw "Failed to start the WinRM service required by Ansible: $($_.Exception.Message)"
+                }
+            }
+
+            Write-Log -Message "Configuring PSRemoting endpoints"
+            Enable-PSRemoting -Force -SkipNetworkProfileCheck
+
+            Write-Log -Message "Enabling RDP"
+            $rdpWMI = Get-CimInstance -ClassName Win32_TerminalServiceSetting -Namespace root\CIMV2\TerminalServices
+            $rdpEnable = $rdpWMI | Invoke-CimMethod -MethodName SetAllowTSConnections -Arguments @{ AllowTSConnections = 1; ModifyFirewallException = 1 }
+            if ($rdpEnable.ReturnValue -ne 0) {
+                throw "Failed to change RDP connection settings, error code: $($rdpEnable.ReturnValue)"
+            }
+
+            Write-Log -Message "Enabling NLA authentication for RDP"
+            $nlaWMI = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace root\CIMV2\TerminalServices
+            $nlaWMI | Invoke-CimMethod -MethodName SetUserAuthenticationRequired -Arguments @{ UserAuthenticationRequired = 1 } | Out-Null
+            $nlaWMI = Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace root\CIMV2\TerminalServices
+            if ($nlaWMI.UserAuthenticationRequired -ne 1) {
+                throw "Failed to enable NLA"
+            }
+        }
+    }
+}
+
+Write-Log -Message "bootstrap.ps1 complete"

@@ -1,0 +1,33 @@
+- name: get VM PID
+  community.general.pids:
+    pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
+  register: qemu_pid
+
+- name: wait for VM process to complete
+  wait_for:
+    path: /proc/{{ item }}/status
+    state: absent
+  loop: '{{ qemu_pid.pids }}'
+
+- name: compress VM image
+  command: >-
+    qemu-img convert
+    -c
+    -O qcow2
+    {{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
+    {{ (box_path ~ '/box.img') | quote }}
+  register: box_img
+  args:
+    creates: '{{ box_path }}/box.img'
+
+- name: get image details
+  command: qemu-img info --output=json {{ (box_path ~ '/box.img') | quote }}
+  register: qemu_img_info
+  changed_when: False
+
+- name: build box metadata
+  set_fact:
+    box_metadata:
+      format: qcow2
+      provider: libvirt
+      virtual_size: '{{ (((qemu_img_info.stdout | trim | from_json)["virtual-size"] | int) / 1073741824) | int }}'

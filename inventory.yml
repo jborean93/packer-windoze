@@ -1,0 +1,116 @@
+all:
+  children:
+    setup:
+      hosts:
+        '2012':
+          box_tag: jborean93/WindowsServer2012
+
+          iso_src: http://download.microsoft.com/download/6/D/A/6DAB58BA-F939-451D-9101-7DE07DC09C03/9200.16384.WIN8_RTM.120725-1247_X64FRE_SERVER_EVAL_EN-US-HRM_SSS_X64FREE_EN-US_DV5.ISO
+          iso_checksum: sha256:19c627b6a24554bce45a3b03fc913a0d791d117088c7e953b9c07e866fd88b67
+          iso_wim_label: Windows Server 2012 SERVERSTANDARD
+          architecture: amd64
+          driver_host_string: 2k12
+
+          updates:
+            product: Windows Server 2012
+            names:
+            - Servicing Stack Update for Windows Server 2012
+            - Security Monthly Quality Rollup for Windows Server 2012
+
+          virtualbox:
+            os_type: Windows2012_64
+
+        2012r2:
+          box_tag: jborean93/WindowsServer2012R2
+
+          iso_src: http://download.microsoft.com/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO
+          iso_checksum: sha256:6612b5b1f53e845aacdf96e974bb119a3d9b4dcb5b82e65804ab7e534dc7b4d5
+          iso_wim_label: Windows Server 2012 R2 SERVERSTANDARD
+          architecture: amd64
+          driver_host_string: 2k12R2
+
+          updates:
+            product: Windows Server 2012 R2
+            names:
+            - Servicing Stack Update for Windows Server 2012 R2
+            - Security Monthly Quality Rollup for Windows Server 2012 R2
+
+          virtualbox:
+            os_type: Windows2012_64
+
+        '2016':
+          box_tag: jborean93/WindowsServer2016
+
+          iso_src: https://software-download.microsoft.com/download/pr/Windows_Server_2016_Datacenter_EVAL_en-us_14393_refresh.ISO
+          iso_checksum: sha256:1ce702a578a3cb1ac3d14873980838590f06d5b7101c5daaccbac9d73f1fb50f
+          iso_wim_label: Windows Server 2016 SERVERSTANDARD
+          architecture: amd64
+          driver_host_string: 2k16
+
+          updates:
+            product: Windows Server 2016
+            names:
+            - Servicing Stack Update for Windows Server 2016
+            - Cumulative Update for Windows Server 2016
+
+          virtualbox:
+            os_type: Windows2016_64
+
+        '2019':
+          box_tag: jborean93/WindowsServer2019
+
+          iso_src: https://software-download.microsoft.com/download/pr/17763.737.190906-2324.rs5_release_svc_refresh_SERVER_EVAL_x64FRE_en-us_1.iso
+          iso_checksum: sha256:549bca46c055157291be6c22a3aaaed8330e78ef4382c99ee82c896426a1cee1
+          iso_wim_label: Windows Server 2019 SERVERSTANDARD
+          architecture: amd64
+          driver_host_string: 2k19
+
+          updates:
+            product: Windows Server 2019
+            names:
+            - Servicing Stack Update for Windows Server 2019
+            - Cumulative Update for Windows Server 2019
+
+          virtualbox:
+            os_type: Windows2019_64
+
+        '2022':
+          box_tag: jborean93/WindowsServer2022
+
+          iso_src: https://software-download.microsoft.com/download/sg/20348.1.210507-1500.fe_release_SERVER_EVAL_x64FRE_en-us.iso
+          iso_checksum: sha256:2ee3a0325f7230b1ff68bd8db2695f4102eae4ff32118382b1ab2e2b98a71aaa
+          iso_wim_label: Windows Server 2022 SERVERSTANDARD
+          architecture: amd64
+          driver_host_string: 2k19  # FUTURE: update once virtio does
+
+          updates:  # FUTURE: This might have changed, look into once more updates are available
+            product: Windows Server 2022
+            names:
+            - Servicing Stack Update for Windows Server 2022
+            - Cumulative Update for Windows Server 2022
+
+          virtualbox:
+            os_type: Windows2019_64  # FUTURE: update once virtualbox does
+
+      vars:
+        ansible_connection: local
+        ansible_python_interpreter: '{{ ansible_playbook_python }}'
+
+    windows:
+      vars:
+        ansible_connection: psrp
+        ansible_user: '{{ setup_username }}'
+        ansible_password: '{{ setup_password }}'
+        ansible_psrp_protocol: http
+        ansible_psrp_auth: basic
+        ansible_psrp_message_encryption: never
+        ansible_become_method: runas
+        ansible_become_user: SYSTEM
+
+  vars:
+    output_dir: '{{ playbook_dir }}/output'
+    platform: qemu
+    openssh_version: V8.6.0.0p1-Beta
+    virtio_version: 0.1.185-2
+    setup_username: vagrant
+    setup_password: vagrant

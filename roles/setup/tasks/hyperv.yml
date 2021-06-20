@@ -1,0 +1,59 @@
+- name: check if VM is registered
+  shell: |
+    if (Get-VM -Name 'windoze-{{ inventory_hostname }}' -ErrorAction SilentlyContinue) { $true } else { $false }
+  args:
+    executable: powershell.exe
+  register: hyperv_vm_info
+  changed_when: False
+
+- name: stop and remove existing VM 
+  when:
+  - force
+  - hyperv_vm_info.stdout | trim | bool
+  block:
+  - name: stop existing VM
+    shell: Stop-VM -Name 'windoze-{{ inventory_hostname }}' -TurnOff
+    args:
+      executable: powershell.exe
+
+  - name: remove existing VM
+    shell: Remove-VM -Name 'windoze-{{ inventory_hostname }}' -Force
+    args:
+      executable: powershell.exe
+
+- name: remove existing VM artifacts
+  file:
+    path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
+    state: absent
+  when: force or not (hyperv_vm_info.stdout | trim | bool)
+  loop:
+  - hyperv
+  - box
+  - hyperv.box
+
+- name: create hyperv temp dir
+  file:
+    path: '{{ output_dir }}/{{ inventory_hostname }}/hyperv'
+    state: directory
+
+- name: template build script
+  template:
+    src: setup-hyperv.ps1.tmpl
+    dest: '{{ output_dir }}/{{ inventory_hostname }}/hyperv/setup-hyperv.ps1'
+
+- name: get Windows path for the Hyper-V script
+  command: wslpath -w {{ (output_dir ~ '/' ~ inventory_hostname ~ '/hyperv/setup-hyperv.ps1') | quote }}
+  changed_when: False
+  register: hyperv_win_path
+
+- name: create Hyper-V VM
+  command: >-
+    powershell.exe -NoProfile -NoLogo -ExecutionPolicy Unrestricted
+    -File {{ hyperv_win_path.stdout | trim | quote }}
+  register: hyperv_create_info
+  changed_when: (hyperv_create_info.stdout | trim | from_json).changed
+
+- name: override guest hostname and port
+  set_fact:
+    guest_host: '{{ hyperv_ip }}'
+    guest_port: 5985

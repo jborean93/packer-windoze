@@ -1,0 +1,208 @@
+[CmdletBinding()]
+param ()
+
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+
+Function ConvertTo-UnattendedIso {
+    <#
+    .SYNOPSIS
+    Converts a Windows ISO to one that doesn't require any keys to press on boot.
+
+    .PARAMETER Path
+    The Windows ISO to convert the UEFI loader to the no_prompt version.
+
+    .PARAMETER Destination
+    The path to create the new Windows ISO at.
+
+    .NOTES
+    This is used with Hyper-V to automatically boot to a Windows installer ISO without any manual intervention that
+    is required on a default ISO. It has been tested on Windows Server 2012 and newer ISOs.
+
+    Thanks to awakecoding for the initial script of creating an ISO using builtin tools to Windows.
+    https://github.com/Devolutions/devolutions-labs/blob/bf9df3b89516885de29b41574ba04632caa24736/powershell/DevolutionsLabs.psm1#L67
+    #>
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [String]
+        $Path,
+
+        [Parameter(Mandatory)]
+        [String]
+        $Destination
+    )
+
+    $resolvedPath = $PSCmdlet.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+    if (-not (Test-Path -LiteralPath $resolvedPath)) {
+        Write-Error -Message "Source ISO Path '$resolvedPath' does not exist" -Category ObjectNotFound
+        return
+    }
+
+    $bootStream = $null
+    Write-Verbose -Message "Mounting input ISO from '$resolvedPath'"
+    $mount = Mount-DiskImage -ImagePath $resolvedPath -PassThru
+    try {
+        $volume = $mount | Get-Volume
+        $mountPath = $volume.DriveLetter + ':'
+
+        # The default is efisys.bin which prompts the user to press any key in a small time period. By using the
+        # noprompt version Hyper-V will automatically boot the ISO.
+        $efiNoPrompt = [IO.Path]::Combine($mountPath, 'efi', 'microsoft', 'boot', 'efisys_noprompt.bin')
+        Write-Verbose -Message "Checking for efi noprompt at '$efiNoprompt'"
+        if (-not (Test-Path -LiteralPath $efiNoPrompt)) {
+            Write-Error -Message "Source ISO does not contain efisys_noprompt.bin at expected path" -Category ObjectNotFound
+            return
+        }        
+
+        $fsi = New-Object -ComObject IMAPI2FS.MsftFileSystemImage
+        $fsi.VolumeName = $volume.FileSystemLabel
+        $fsi.FileSystemsToCreate = 4  # FsiFileSystemUDF
+        $fsi.UDFRevision = 0x102  # 1.02
+        $fsi.FreeMediaBlocks = 0
+
+        # This is the magic that overrides the ISO boot command that UEFI will run.
+        $bootStream = New-Object -ComObject ADODB.Stream
+        $bootStream.Type = 1  # adTypeBinary
+        $bootStream.Open()
+        $bootStream.LoadFromFile($efiNoPrompt)
+        $bootOptions = New-Object -ComObject IMAPI2FS.BootOptions
+        $bootOptions.AssignBootImage($bootStream)
+
+        $fsi.BootImageOptions = $bootOptions
+        Write-Verbose -Message "Adding original ISO contents to new ISO"
+        $fsi.Root.AddTree($mountPath, $false)
+        Write-Verbose -Message "Test"
+        $image = $fsi.CreateResultImage()
+    } finally {
+        if ($bootStream) { $bootStream.Close() }
+        $mount | Dismount-DiskImage | Out-Null
+    }
+
+    $resolvedDest = $PSCmdlet.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
+    Write-Verbose -Message "Opening new FileStream to destination path at '$resolvedDest'"
+    $outFS = [System.IO.FileStream]::new($resolvedDest, 'Create', 'Write')
+    try {
+        # It's a lot slower to do this in pure PowerShell so we use C#
+        Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+
+namespace Com
+{
+    public class IStreamExtension
+    {
+        public static void CopyTo(object src, Stream dest, int blockSize)
+        {
+            IStream inputStream = src as IStream;
+
+            byte[] buffer = new byte[blockSize];
+            IntPtr readBuffer = Marshal.AllocCoTaskMem(Marshal.SizeOf(typeof(int)));
+            try
+            {
+                int read = 0;
+                do
+                {
+                    Marshal.WriteInt32(readBuffer, buffer.Length);
+                    inputStream.Read(buffer, buffer.Length, readBuffer);
+                    read = Marshal.ReadInt32(readBuffer);
+
+                    dest.Write(buffer, 0, read);
+                }
+                while (read == buffer.Length);
+            }
+            finally
+            {
+                Marshal.FreeCoTaskMem(readBuffer);
+            }
+        }
+    }
+}
+'@
+
+        Write-Verbose -Message "Writing ISO stream to destination"
+        [Com.IStreamExtension]::CopyTo($image.ImageStream, $outFS, $image.BlockSize)
+    }
+    finally {
+        $outFS.Dispose()
+    }
+}
+
+$changed = $false
+$windowsVersion = {{ inventory_hostname | ansible.windows.quote(shell='powershell') }}
+$vmName = "windoze-$windowsVersion"
+$password = ConvertTo-SecureString -AsPlainText -Force -String {{ setup_password | ansible.windows.quote(shell='powershell') }}
+$cred = [PSCredential]::new({{ setup_username | ansible.windows.quote(shell='powershell') }}, $password)
+$outputPath = Split-Path $PSScriptRoot -Parent
+
+# Hyper-V will lock the path so we copy it to a temp directory
+$secIsoPath = (Join-Path $PSScriptRoot secondary.iso)
+if (-not (Test-Path -LiteralPath $secIsoPath)) {
+    Copy-Item (Join-Path $outputPath "$windowsVersion-secondary.iso") $secIsoPath
+}
+
+$vm = Get-VM -Name $vmName -ErrorAction SilentlyContinue
+if (-not $vm) {
+    $changed = $true
+
+    # Convert the ISO to one that automatically boots without any user prompts.
+    $winIsoPath = Join-Path $PSScriptRoot 'windows.iso'
+    ConvertTo-UnattendedIso -Path (Join-Path $outputPath "$windowsVersion-windows.iso") -Destination $winIsoPath
+
+    $vhdxPath = (Join-Path $PSScriptRoot "$($windowsVersion)-vm.vhdx")
+    if (Test-Path -LiteralPath $vhdxPath) {
+        Remove-Item -LiteralPath $vhdxPath -Force
+    }
+
+    $vmParams = @{
+        Name = $vmName
+        MemoryStartupBytes = 2048MB
+        SwitchName = 'WSL'
+        NewVHDPath = $vhdxPath
+        NewVHDSizeBytes = 40GB
+        Generation = 2
+        Force = $true
+    }
+    $vmSettings = @{
+        AutomaticCheckpointsEnabled = $false
+        AutomaticStopAction = 'Shutdown'
+        CheckpointType = 'Disabled'
+        ProcessorCount = 2       
+    }
+    $vm = New-VM @vmParams
+    $vm | Set-VM @vmSettings
+    $winDvd = $vm | Add-VMDvdDrive -Path $winIsoPath -PassThru
+    $vm | Add-VMDvdDrive -Path $secIsoPath
+    $vm | Set-VMFirmware -BootOrder $vm.HardDrives[0], $winDvd
+    $vm | Start-VM
+}
+
+if (-not ${{ headless }}) {
+    vmconnect localhost $vmName
+}
+
+while ($true) {
+    # Wait until the VM is online and Windows is installed.
+    while ((Get-VMIntegrationService -VMName $vmName -Name Heartbeat).PrimaryStatusDescription -ne 'OK') {
+        Start-Sleep -Seconds 5
+    }
+
+{% if inventory_hostname not in ['2012', '2012r2'] %}
+{# Hyper-V direct only works when the target has powershell >=5 #}
+    # Finally check that the host is online and ready to use
+    try {
+        $null = Invoke-Command -VMName $vmName -Credential $cred -ScriptBlock {
+            "hello"
+        }
+    }
+    catch {
+        continue
+    }
+
+{% endif %}
+    break
+}
+
+@{changed = $changed} | ConvertTo-Json -Compress

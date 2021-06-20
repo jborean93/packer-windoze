@@ -57,11 +57,8 @@
 
 - name: set flag to recreate pagefile after next sysprep
   win_shell: |
-    $system = Get-WmiObject -Class Win32_ComputerSystem -EnableAllPrivileges
-    if ($system -ne $null) {
-        $system.AutomaticManagedPagefile = $true
-        $system.Put()
-    }
+    Get-CimInstance -ClassName Win32_ComputerSystem |
+      Set-CimInstance -Property @{ AutomaticManagedPagefile = $true }
 
 - name: 0 out empty space for later compression
   win_command: 'SDelete.exe -accepteula -q -z C:'

@@ -1,0 +1,64 @@
+- name: stop all build instances
+  hosts: setup
+  gather_facts: no
+
+  tasks:
+  # QEMU
+  - name: QEMU - check if VM is already running
+    community.general.pids:
+      pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
+    register: qemu_pid
+
+  - name: QEMU - stop VMs
+    command: kill {{ item }}
+    loop: '{{ qemu_pid.pids }}'
+
+  # VirtualBox
+  - name: VirtualBox - check if VM is registered
+    command: VBoxManage showvminfo windoze-{{ inventory_hostname }}
+    register: vbox_vm_info
+    changed_when: False
+    failed_when: False
+
+  - name: VirtualBox - stop VM
+    command: VBoxManage controlvm {{ ('windoze-' ~ inventory_hostname) | quote }} poweroff
+    when: '"running" in vbox_vm_info.stdout'
+
+  - name: VirtualBox - remove VM
+    command: VBoxManage unregistervm {{ ('windoze-' ~ inventory_hostname) | quote }} --delete
+    when: vbox_vm_info.rc == 0
+
+  # Hyper-V
+  - name: Hyper-V - stop VM and remove VM
+    shell: |
+      $changed = $false
+      $vmName = 'windoze-{{ inventory_hostname }}'
+      $vm = Get-VM -Name $vmName -ErrorAction SilentlyContinue
+      if ($vm) {
+          $changed = $true
+          if ($vm.State -ne 'Off') {
+              $vm | Stop-VM -TurnOff
+
+              while ((Get-VM -Name $vmName).State -ne 'Off') {
+                  Start-Sleep -Seconds 1
+              }
+          }
+
+          $vm | Remove-VM -Force
+      }
+
+      $changed
+    args:
+      executable: powershell.exe
+    register: hyperv_vm
+    changed_when: hyperv_vm.stdout | trim | bool
+
+  # Common
+  - name: remove any provider specific build artifacts
+    file:
+      path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
+      state: absent
+    loop:
+    - hyperv
+    - vbox
+    - qemu

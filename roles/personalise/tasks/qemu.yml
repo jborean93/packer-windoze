@@ -1,7 +1,15 @@
----
+- name: get the root drive where the VirtIO disk is mounted
+  win_shell: (Get-PSDrive | Where-Object { Test-Path -Path "$($_.Name):\guest-agent" }).Name
+  register: pri_personalise_ga_root_res
+  changed_when: no
+
+- name: get rid of module output cruft
+  set_fact:
+    pri_personalise_ga_root: '{{ pri_personalise_ga_root_res.stdout_lines[0] }}'
+
 - name: install QEMU Guest Additions from virtio disk
   win_package:
-    path: E:\guest-agent\qemu-ga-{{ (man_host_architecture == 'x86') | ternary('i386', 'x86_64') }}.msi
+    path: '{{ pri_personalise_ga_root }}:\guest-agent\qemu-ga-{{ (architecture == "x86") | ternary("i386", "x86_64") }}.msi'
     state: present
   register: pri_personalise_ga_res
 
@@ -16,7 +24,7 @@
 
 - name: copy the Balloon memory service executable to the host
   win_copy:
-    src: E:\Balloon\{{ man_driver_host_string }}\{{ man_host_architecture }}\blnsvr.exe
+    src: '{{ pri_personalise_ga_root }}:\Balloon\{{ driver_host_string }}\{{ architecture }}\blnsvr.exe'
     dest: C:\Program Files\QEMU_Balloon\blnsvr.exe
     remote_src: yes
 
@@ -31,7 +39,7 @@
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1377155
 - name: fix up ACPI0010 unknown device settings for Server 2016
-  when: man_host_type == '2016'
+  when: inventory_hostname == 'win-2016'
   block:
   - name: get keys under DriverPackages
     win_reg_stat:

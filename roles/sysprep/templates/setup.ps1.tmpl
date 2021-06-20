@@ -1,60 +1,97 @@
 $ErrorActionPreference = 'Stop'
 
-$runonce_reg_key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce"
-$ps_path = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-$tmp_dir = "$env:SystemDrive\temp"
+Function Write-Log {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory)]
+        [String]
+        $Message,
 
-Function Write-Log($message, $level="INFO") {
-    $date_stamp = Get-Date -Format s
-    $log_entry = "$date_stamp - $level - $message"
-    $log_file = "$tmp_dir\sysprep-setup.log"
-    Write-Host $log_entry
-    Add-Content -Path $log_file -Value $log_entry
+        [ValidateSet('Info', 'Error')]
+        [String]
+        $Level = 'Info'
+    )
+
+    $dateStr = Get-Date -Format s
+    $msg = '{0} - {1} - {2}' -f $dateStr, $Level.ToUpper(), $Message
+
+    Write-Host $msg
+    $logFile = Join-Path $PSScriptRoot 'sysprep-setup.log'
+    Add-Content -Path $logFile -Value $msg
 }
 
 $action = $args[0]
-switch($action) {
+switch( $action) {
     "post-sysprep" {
-        Write-Log -message "Deleting packer shutdown scheduled task"
+        Write-Log -Message "Deleting packer shutdown scheduled task"
         &schtasks.exe /Delete /TN "packer-shutdown" /F
 
-        Write-Log -message "Removing the sysprep files as they are no longer needed"
+        Write-Log -Message "Removing the sysprep files as they are no longer needed"
         Remove-Item -Path C:\Windows\Panther\Unattend -Force -Recurse > $null
 
-        Write-Log -message "Disabling the Administrator account as it is not needed"
+        Write-Log -Message "Disabling the Administrator account as it is not needed"
         &cmd.exe /c net user Administrator /active:no
 
-        Write-Log -message "Disabling the password expiration of the {{ansible_user}} account"
-        &cmd.exe @("/c", "WMIC", "USERACCOUNT", "WHERE", "Name='{{ansible_user}}'", "SET", "PasswordExpires=FALSE")
+        Write-Log -Message "Disabling the password expiration of the current account"
+        $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+        $adsi = [ADSI]"WinNT://$env:COMPUTERNAME"
+        $user = $adsi.Children | Where-Object {
+            if ($_.SchemaClassName -ne 'User') {
+                return $false
+            }
 
-{% if man_is_longhorn == False %}
-        Write-Log -message "Setting sshd services to auto start"
+            $userSid = New-Object -TypeName System.Security.Principal.SecurityIdentifier -ArgumentList $_.objectSid[0], 0
+            $userSid.Equals($sid)
+        }
+        $user.UserFlags = $user.UserFlags.Value -bor 65536  # ADS_UF_DONT_EXPIRE_PASSWD
+        $user.SetInfo()
+
+        Write-Log -Message "Setting sshd services to auto start"
         Set-Service -Name sshd -StartupType Automatic
         Set-Service -Name ssh-agent -StartupType Automatic
-{% endif %}
 
-        Write-Log -message "Rearming the host using slmgr.vbs /rearm"
+        Write-Log -Message "Rearming the host using slmgr.vbs /rearm"
         &C:\Windows\System32\cscript.exe C:\Windows\System32\slmgr.vbs /rearm
 
-        Write-Log -message "Restarting the host to rerun script with action winrm-active"
-        $command = "$ps_path $($script:MyInvocation.MyCommand.Path) winrm-active"
-        Set-ItemProperty -Path $runonce_reg_key -Name "bootstrap" -Value $command
+        $runonceKey = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce'
+        $psPath = "$env:SystemDrive\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+
+        Write-Log -Message "Restarting the host to rerun script with action winrm-active"
+        $command = "$psPath $PSCommandPath winrm-active"
+        Set-ItemProperty -Path $runonceKey -Name "bootstrap" -Value $command
         Restart-Computer -Force
     }
     "winrm-active" {
-        Write-Log -message "Deleting auto logon entries from registry"
-        $reg_winlogon_path = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
-        Set-ItemProperty -Path $reg_winlogon_path -Name AutoAdminLogon -Value 0
-        Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultUserName -ErrorAction SilentlyContinue
-        Remove-ItemProperty -Path $reg_winlogon_path -Name DefaultPassword -ErrorAction SilentlyContinue
+        Write-Log -Message "Deleting auto logon entries from registry"
+        $regWinlogon = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+        Set-ItemProperty -Path $regWinlogon -Name AutoAdminLogon -Value 0
+        Remove-ItemProperty -Path $regWinlogon -Name DefaultUserName -ErrorAction SilentlyContinue
+        Remove-ItemProperty -Path $regWinlogon -Name DefaultPassword -ErrorAction SilentlyContinue
 
-        Write-Log -message "Setting the rearm key back to 0 so people in the future can rearm the OS"
+        Write-Log -Message "Setting the rearm key back to 0 so people in the future can rearm the OS"
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform" -Name SkipRearm -Value 0
 
-        Write-Log -message "Recreate the WinRM listeners"
+{% if platform == 'virtualbox' and inventory_hostname == 'win-2022' %}
+{# Bug in NetKVM for Server 2022 - https://github.com/virtio-win/kvm-guest-drivers-windows/issues/583 #}
+        Write-Log -Message "Disabling Offload Tx Checksum for NetKVM adapter"
+        Get-NetAdapter |
+            Where-Object DriverFileName -eq 'netkvm.sys' |
+            Set-NetAdapterAdvancedProperty -RegistryKeyword 'Offload.TxChecksum' -RegistryValue 0
+{% endif %}
+        Write-Log -Message "Recreate the WinRM listeners"
         Reset-WinRMConfig -Verbose
 
-        Write-Log -message "Cleaning up C:\temp and logging off"
+        # Older Windows hosts (Server 2012) uses a SHA1 cert which newer OpenSSL versions don't support.
+        # We just replace on all hosts to make things simple and uniform
+        Write-Log -Message "Updating RDP certificate to a SHA256 backed cert"
+        $thumbprint = Get-Item -Path WSMan:\localhost\Listener\*\* |
+            Where-Object { $_.Name -eq 'CertificateThumbprint' -and $_.Value } |
+            Select-Object -First 1 -ExpandProperty Value
+
+        Get-CimInstance -ClassName Win32_TSGeneralSetting -Namespace ROOT\CIMV2\TerminalServices |
+            Set-CimInstance -Property @{ SSLCertificateSHA1Hash = $thumbprint }
+
+        Write-Log -Message "Cleaning up C:\temp and logging off"
         Remove-Item -Path C:\temp -Force -Recurse
         New-Item -Path C:\temp -ItemType Directory
 

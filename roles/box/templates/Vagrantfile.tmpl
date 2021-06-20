@@ -1,0 +1,44 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+Vagrant.configure(2) do |config|
+  config.vm.box = "{{ box_tag }}"
+  config.vm.guest = :windows
+  config.vm.communicator = "winrm"
+  config.winrm.username = "{{ setup_username }}"
+  config.winrm.password = "{{ setup_password }}"
+  config.vm.boot_timeout = 600
+  config.vm.network :forwarded_port, guest: 3389, host: 3389, id: 'rdp', auto_correct: true
+  config.vm.network :forwarded_port, guest: 22, host: 2222, id: 'ssh', auto_correct: true
+
+{% if platform in ['hyperv', 'qemu'] %}
+{# Not compatible with libvirt/qemu and Hyper-V always prompts for creds #}
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+{% endif %}
+  config.vm.provider "virtualbox" do |vb|
+    vb.cpus = 2
+    vb.default_nic_type = "virtio"
+    vb.gui = false
+    vb.linked_clone = true
+    vb.memory = 2048
+  end
+
+  config.vm.provider "hyperv" do |h|
+    h.cpus = 2
+    h.linked_clone = true
+    h.memory = 2048
+  end
+
+  config.vm.provider "libvirt" do |l|
+    l.clock_offset = 'localtime'
+    l.clock_timer :name => 'hypervclock', :present => 'yes'
+    l.cpus = 2
+    l.disk_bus = "virtio"
+    l.hyperv_feature :name => 'relaxed', :state => 'on'
+    l.hyperv_feature :name => 'spinlocks', :state => 'on', :retries => 8191
+    l.hyperv_feature :name => 'vapic', :state => 'on'
+    l.input :type => "tablet", :bus => "usb"
+    l.memory = 2048
+    l.nic_model_type = "virtio"
+    l.video_type = 'qxl'
+  end
+end

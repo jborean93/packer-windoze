@@ -1,62 +1,18 @@
-# Server 2008, 2008 R2 and 2012 don't have cleanmgr setup by default, this
+# Server 2012 doesn't have cleanmgr setup by default, this
 # needs to be copied from the relevant winsxs folder to it's intended location
 # before running.
 ---
-- name: copy cleanmgr from winsxs Server 2008 32-bit
-  win_copy:
-    src: C:\Windows\WinSxS\x86_microsoft-windows-cleanmgr_31bf3856ad364e35_6.0.6001.18000_none_6d4436615d8bd133\cleanmgr.exe
-    dest: C:\Windows\System32\cleanmgr.exe
-    remote_src: True
-  when: man_host_type == "2008-x86"
-
-- name: copy cleanmgr mui from winsxs Server 2008 32-bit
-  win_copy:
-    src: C:\Windows\WinSxS\x86_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.0.6001.18000_en-us_5dd66fed98a6c5bc\cleanmgr.exe.mui
-    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
-    remote_src: True
-  when: man_host_type == "2008-x86"
-
-- name: copy cleanmgr from winsxs Server 2008 64-bit
-  win_copy:
-    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.0.6001.18000_none_c962d1e515e94269\cleanmgr.exe
-    dest: C:\Windows\System32\cleanmgr.exe
-    remote_src: True
-  when: man_host_type == "2008-x64"
-
-- name: copy cleanmgr mui from winsxs Server 2008 64-bit
-  win_copy:
-    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.0.6001.18000_en-us_b9f50b71510436f2\cleanmgr.exe.mui
-    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
-    remote_src: True
-  when: man_host_type == "2008-x64"
-
-- name: copy cleanmgr from winsxs Server 2008 R2
-  win_copy:
-    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.1.7600.16385_none_c9392808773cd7da\cleanmgr.exe
-    dest: C:\Windows\System32\cleanmgr.exe
-    remote_src: True
-  when: man_host_type == "2008r2"
-
-- name: copy cleanmgr mui from winsxs Server 2008 R2
-  win_copy:
-    src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.1.7600.16385_en-us_b9cb6194b257cc63\cleanmgr.exe.mui
-    dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
-    remote_src: True
-  when: man_host_type == "2008r2"
-
-- name: copy cleanmgr from winsxs Server 2012
+- name: copy cleanmgr from winsxs
   win_copy:
     src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr_31bf3856ad364e35_6.2.9200.16384_none_c60dddc5e750072a\cleanmgr.exe
     dest: C:\Windows\System32\cleanmgr.exe
     remote_src: True
-  when: man_host_type == "2012"
 
-- name: copy cleanmgr mui from winsxs Server 2012
+- name: copy cleanmgr mui from winsxs
   win_copy:
     src: C:\Windows\WinSxS\amd64_microsoft-windows-cleanmgr.resources_31bf3856ad364e35_6.2.9200.16384_en-us_b6a01752226afbb3\cleanmgr.exe.mui
     dest: C:\Windows\System32\en-US\cleanmgr.exe.mui
     remote_src: True
-  when: man_host_type == "2012"
 
 - name: run cleanmgr with everything set
   block:

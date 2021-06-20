@@ -1,49 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
     <settings pass="generalize">
-        <component name="Microsoft-Windows-Security-SPP" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-Security-SPP" processorArchitecture="{{ architecture }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <SkipRearm>1</SkipRearm>
         </component>
-        <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-PnpSysprep" processorArchitecture="{{ architecture }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <PersistAllDeviceInstalls>false</PersistAllDeviceInstalls>
-{% if man_is_longhorn == False %}
             <DoNotCleanUpNonPresentDevices>false</DoNotCleanUpNonPresentDevices>
-{% endif %}
         </component>
     </settings>
     <settings pass="oobeSystem">
-        <component name="Microsoft-Windows-International-Core" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-International-Core" processorArchitecture="{{ architecture }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <InputLocale>en-US</InputLocale>
             <SystemLocale>en-US</SystemLocale>
             <UILanguage>en-US</UILanguage>
             <UserLocale>en-US</UserLocale>
         </component>
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{ architecture }}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
             <OOBE>
                 <HideEULAPage>true</HideEULAPage>
                 <ProtectYourPC>1</ProtectYourPC>
                 <NetworkLocation>Home</NetworkLocation>
-{% if man_is_longhorn == False %}
                 <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-{% endif %}
             </OOBE>
             <TimeZone>UTC</TimeZone>
-{% if man_is_longhorn == True %}
-            <ComputerName>*</ComputerName>
-{% endif %}
             <UserAccounts>
                 <AdministratorPassword>
-                    <Value>{{ansible_password}}</Value>
+                    <Value>{{ ansible_password }}</Value>
                     <PlainText>true</PlainText>
                 </AdministratorPassword>
                 <LocalAccounts>
                     <LocalAccount wcm:action="add">
                         <Group>Administrators</Group>
-                        <DisplayName>{{ansible_user}}</DisplayName>
-                        <Name>{{ansible_user}}</Name>
-                        <Description>{{ansible_user}}</Description>
+                        <DisplayName>{{ ansible_user }}</DisplayName>
+                        <Name>{{ ansible_user }}</Name>
+                        <Description>{{ ansible_user }}</Description>
                         <Password>
-                            <Value>{{ansible_password}}</Value>
+                            <Value>{{ ansible_password }}</Value>
                             <PlainText>true</PlainText>
                         </Password>
                     </LocalAccount>
@@ -51,9 +44,9 @@
             </UserAccounts>
             <AutoLogon>
                 <Enabled>true</Enabled>
-                <Username>{{ansible_user}}</Username>
+                <Username>{{ ansible_user }}</Username>
                 <Password>
-                    <Value>{{ansible_password}}</Value>
+                    <Value>{{ ansible_password }}</Value>
                     <PlainText>true</PlainText>
                 </Password>
             </AutoLogon>
@@ -66,11 +59,5 @@
         </component>
     </settings>
     <settings pass="specialize">
-{% if man_is_longhorn == True %}
-        <!-- Server 2008 requires this to stop asking for the Computer Name after sysprep -->
-        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="{{man_host_architecture}}" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-            <ComputerName>*</ComputerName>
-        </component>
-{% endif %}
     </settings>
 </unattend>

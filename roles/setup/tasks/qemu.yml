@@ -1,0 +1,58 @@
+- name: check if VM is already running
+  community.general.pids:
+    pattern: '{{ ("qemu-system-x86_64 -name windoze-" ~ inventory_hostname ~ " -machine") | regex_escape("posix_basic") }}*'
+  register: qemu_pid
+
+- name: kill existing VM if force is specified
+  command: kill {{ item }}
+  loop: '{{ qemu_pid.pids }}'
+  when: force
+
+- name: start VM if not already running
+  when: force or qemu_pid.pids | length == 0
+  block:
+  - name: ensure older artifacts are removed
+    file:
+      path: '{{ output_dir }}/{{ inventory_hostname }}/{{ item }}'
+      state: absent
+    loop:
+    - qemu
+    - box
+    - qemu.box
+
+  - name: create QEMU build dir
+    file:
+      path: '{{ output_dir }}/{{ inventory_hostname }}/qemu'
+      state: directory
+
+  - name: create QEMU hdd image
+    command: >-
+      qemu-img create
+      -f qcow2
+      -o preallocation=metadata
+      {{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }}
+      40960M
+
+  - name: start up QEMU VM
+    command: >-
+      qemu-system-x86_64
+      -name windoze-{{ inventory_hostname }}
+      -machine type=pc,accel=kvm
+      -cpu host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time
+      -smp cpus=2,sockets=2
+      -m 2048M
+      -vga qxl
+      -display {{ headless | ternary('none', 'gtk') }}
+      -spice port={{ (guest_port | int) + 1 }},addr=127.0.0.1,disable-ticketing
+      -device virtio-serial-pci
+      -device virtserialport,chardev=spicechannel{{ inventory_hostname }}0,name=com.redhat.spice.0
+      -chardev spicevmc,id=spicechannel{{ inventory_hostname }}0,name=vdagent
+      -usb -device usb-tablet
+      -netdev user,id=user0,hostfwd=tcp::{{ guest_port }}-:5985
+      -device virtio-net,netdev=user0
+      -drive file={{ iso_src | quote }},index=0,media=cdrom
+      -drive file={{ secondary_iso_src | quote }},index=1,media=cdrom
+      -drive file={{ (output_dir ~ '/common/virtio-win.iso') | quote }},index=2,media=cdrom
+      -drive file={{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
+      -boot once=d
+      -daemonize

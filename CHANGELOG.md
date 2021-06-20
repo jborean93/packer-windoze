@@ -6,6 +6,21 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v1.0.0 - 2021-06-19
+
+* Removed Packer as part of the build process, this runs using Ansible only.
+* Removed the Server 2008 and 2008 R2 builds as they are end of life.
+* Disabled shutdown tracker UI by default.
+* Added Server 2022 based on the latest preview ISO on the evaluation centre.
+* Added `pwsh` to the image and configured PSRemoting of `pwsh` for both SSH and WinRM.
+* Recreate RDP certificate to use SHA256 as SHA1 is being deprecated.
+* Enable a few Hyper-V features for the default QEMU/Libvirt Vagrantfile.
+* Updated OpenSSH version to [v8.6.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/V8.6.0.0p1-Beta).
+* Updated VirtIO driver version to `0.1.185`.
+* Raised minimum Ansible version to `2.9.0`.
+* 2022
+    * New build added in this version
+
 ### v0.7.0 - 2019-12-20
 
 * Added `qemu/libvirt` boxes and default template to use VirtIO drivers for better performance
