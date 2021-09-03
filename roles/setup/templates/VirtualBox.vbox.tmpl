@@ -49,5 +49,9 @@
     <StorageControllers>
       <StorageController name="SATA" type="AHCI" PortCount="5" useHostIOCache="true" Bootable="true" IDE0MasterEmulationPort="0" IDE0SlaveEmulationPort="1" IDE1MasterEmulationPort="2" IDE1SlaveEmulationPort="3"/>
     </StorageControllers>
+    <VRDEProperties>
+      <Property name="TCP/Address" value="{{ virtualbox.vrde_host }}"/>
+      <Property name="TCP/Ports" value="{{ virtualbox.vrde_port }}"/>
+    </VRDEProperties>
   </Machine>
 </VirtualBox>
