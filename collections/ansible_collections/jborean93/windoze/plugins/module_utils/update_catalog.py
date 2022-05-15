@@ -39,7 +39,7 @@ except ImportError:
 
 
 CATALOG_URL = 'https://www.catalog.update.microsoft.com/'
-DOWNLOAD_PATTERN = re.compile(r'\[(\d*)\]\.url = [\"\'](http[s]?://w{0,3}.?download\.windowsupdate\.com/[^\'\"]*)')
+DOWNLOAD_PATTERN = re.compile(r'\[(\d*)\]\.url = [\"\'](http[s]?://.*download\.windowsupdate\.com/[^\'\"]*)')
 PRODUCT_SPLIT_PATTERN = re.compile(r',(?=[^\s])')
 
 
@@ -72,6 +72,7 @@ async def _invoke_request(
     # The update catalog is crazy unstable and can comsetimes return an error, no response, something else. Instead we
     # just try the request multiple times until it works. Not great but I don't have time to find out a better way.
     failed_once = False
+    attempt = 0
 
     while True:
         try:
@@ -84,7 +85,11 @@ async def _invoke_request(
                 # I found that if it fails at least once adding a sleep between attempts helps.
                 await asyncio.sleep(1)
 
+            if attempt > 9:
+                raise
+
             failed_once = True
+            attempt += 1
 
 
 async def _get_update_details(

@@ -77,17 +77,17 @@ all:
         '2022':
           box_tag: jborean93/WindowsServer2022
 
-          iso_src: https://software-download.microsoft.com/download/sg/20348.1.210507-1500.fe_release_SERVER_EVAL_x64FRE_en-us.iso
-          iso_checksum: sha256:2ee3a0325f7230b1ff68bd8db2695f4102eae4ff32118382b1ab2e2b98a71aaa
+          iso_src: https://software-static.download.prss.microsoft.com/sg/download/888969d5-f34g-4e03-ac9d-1f9786c66749/SERVER_EVAL_x64FRE_en-us.iso
+          iso_checksum: sha256:3e4fa6d8507b554856fc9ca6079cc402df11a8b79344871669f0251535255325
           iso_wim_label: Windows Server 2022 SERVERSTANDARD
           architecture: amd64
-          driver_host_string: 2k19  # FUTURE: update once virtio does
+          driver_host_string: 2k22
 
-          updates:  # FUTURE: This might have changed, look into once more updates are available
-            product: Windows Server 2022
+          updates:
+            product: Microsoft Server operating system-21H2
             names:
-            - Servicing Stack Update for Windows Server 2022
-            - Cumulative Update for Windows Server 2022
+            - Servicing Stack Update for Microsoft server operating system version 21H2
+            - Cumulative Update for Microsoft server operating system version 21H2
 
           virtualbox:
             os_type: Windows2019_64  # FUTURE: update once virtualbox does
@@ -110,7 +110,8 @@ all:
   vars:
     output_dir: '{{ playbook_dir }}/output'
     platform: qemu
-    openssh_version: V8.6.0.0p1-Beta
-    virtio_version: 0.1.185-2
+    openssh_version: v8.9.1.0p1-Beta
+    # FUTURE: Update once https://github.com/virtio-win/kvm-guest-drivers-windows/issues/769 is fixed
+    virtio_version: 0.1.215-2
     setup_username: vagrant
     setup_password: vagrant

@@ -129,6 +129,7 @@
       if ($pwsh) {
           (New-Object -ComObject Scripting.FileSystemObject).GetFile($pwsh.Path).ShortPath
       }
+    changed_when: False
     register: pri_personalize_pwsh_path
     retries: 5  # Found intermittent errors here, just try a few times - might need to replace the COM side.
     delay: 5
@@ -137,6 +138,120 @@
   - name: set output fact for OpenSSH to use for pwsh subsystem path
     set_fact:
       out_personalize_pwsh_path: '{{ pri_personalize_pwsh_path.stdout | trim }}'
+
+- name: module updates for PowerShell Pre 5.1
+  when:
+  - inventory_hostname in ['win-2012', 'win-2012r2']
+  block:
+  - name: install PowerShellGet, PackageManagement
+    ansible.windows.win_powershell:
+      script: |
+        [CmdletBinding()]
+        param()
+
+        $ErrorActionPreference = 'Stop'
+        $Ansible.Changed = $false
+
+        Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        $moduleDir = Join-Path -Path $env:ProgramFiles -ChildPath (Join-Path -Path "WindowsPowerShell" -ChildPath "Modules")
+        if (-not (Test-Path -LiteralPath $moduleDir)) {
+            New-Item -Path $moduleDir -ItemType Directory | Out-Null
+            $Ansible.Changed = $true
+        }
+
+        foreach ($package in @("PowerShellGet", "PackageManagement")) {
+            $targetDir = Join-Path -Path $moduleDir -ChildPath $package
+            if (Test-Path -LiteralPath $targetDir) {
+                continue
+            }
+            $Ansible.Changed = $true
+
+            $searchUri = 'https://www.powershellgallery.com/api/v2/Packages?$filter=Id eq ''{0}'' and IsLatestVersion' -f $package
+            $res = Invoke-RestMethod -Uri $searchUri
+            $sourceUri = $res.Content.src
+            $moduleTmp = Join-Path -Path $Ansible.Tmpdir -ChildPath $package
+            New-Item -Path $moduleTmp -ItemType Directory | Out-Null
+
+            $moduleZip = Join-Path -Path $moduleTmp -ChildPath "$package.zip"
+            (New-Object -TypeName System.Net.WebClient).DownloadFile($sourceUri, $moduleZip)
+            [System.IO.Compression.ZipFile]::ExtractToDirectory($moduleZip, $moduleTmp)
+
+            New-Item -Path $targetDir -ItemType Directory | Out-Null
+            Copy-Item -Path (Join-Path -Path $moduleTmp -ChildPath "*") -Destination $targetDir -Recurse
+
+            # Remove some extra files that would be in the npkg
+            Remove-Item -LiteralPath (Join-Path -Path $targetDir -ChildPath "$package.zip") -Force -Recurse
+            Remove-Item -LiteralPath (Join-Path -Path $targetDir -ChildPath "$package.nuspec") -Force -Recurse
+            Remove-Item -LiteralPath (Join-Path -Path $targetDir -ChildPath "[Content_Types].xml") -Force -Recurse
+            Remove-Item -LiteralPath (Join-Path -Path $targetDir -ChildPath "_rels") -Force -Recurse
+            Remove-Item -LiteralPath (Join-Path -Path $targetDir -ChildPath "package") -Force -Recurse
+        }
+
+  # This is the latest version that is available for PowerShell pre 5.1
+  - name: install PSReadLine 1.2
+    ansible.windows.win_powershell:
+      script: |
+        [CmdletBinding()]
+        param()
+
+        $ErrorActionPreference = 'Stop'
+        $Ansible.Changed = $false
+
+        if (-not (Get-Module -Name PSReadLine -ListAvailable)) {
+            Install-Module -Name PSReadLine -RequiredVersion '1.2' -Force
+            $Ansible.Changed = $true
+        }
+    # Remove once 2012 is gone
+    environment:
+      PSModulePath: C:\Program Files\WindowsPowerShell\Modules
+
+- name: module updates for PowerShell 5.1
+  when:
+  - inventory_hostname not in ['win-2012', 'win-2012r2']
+  block:
+  - name: install newer versions of PowerShellGet, PackageManagement, and PSReadLine
+    ansible.windows.win_powershell:
+      script: |
+        [CmdletBinding()]
+        param()
+
+        $ErrorActionPreference = 'Stop'
+        $Ansible.Changed = $false
+
+        # Needed for Server 2016
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+        if (-not (Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
+            Install-PackageProvider -Name NuGet -Force -ForceBootstrap | Out-Null
+            $Ansible.Changed = $true
+        }
+
+        foreach ($package in @("PackageManagement", "PowerShellGet", "PSReadLine")) {
+            $latestVersion = Find-Module -Name $package -AllVersions -ErrorAction SilentlyContinue |
+                Sort-Object -Property Version -Descending |
+                Select-Object -ExpandProperty Version -First 1
+            $installedVersions = Get-Module -Name $package -ListAvailable
+
+            $installed = $installedVersions | Where-Object Version -eq $latestVersion
+            if ($installed) {
+                continue
+            }
+
+            Install-Module -Name $package -Force
+            $Ansible.Changed = $true
+
+            # Output for the next task to remove
+            $installedVersions.ModuleBase
+        }
+    register: pri_personalize_pwsh_packages
+
+  # This needs to be done in a separate process as the above would have loaded some dlls and locked the dir
+  - name: remove older versions of PowerShellGet, PackageManagement, and PSReadLine
+    win_file:
+      path: '{{ item }}'
+      state: absent
+    with_items: '{{ pri_personalize_pwsh_packages.output }}'
 
 - name: install the VirtualBox Guest Additions
   include_tasks: virtualbox.yml

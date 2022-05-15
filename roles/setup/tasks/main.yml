@@ -60,7 +60,16 @@
   get_url:
     url: https://www.microsoft.com/pki/certs/MicrosoftCodeVerifRoot.crt
     dest: '{{ output_dir }}/common/MicrosoftCodeVerifRoot.crt'
+    checksum: sha256:ca7791d5c9a1580dcdcad31d0549fea2043e229aa4f4932cfa056ca23eb8a950
   register: verif_root_cert
+  run_once: True
+
+- name: download latest VeriSign universal root for VirtIO signed devices
+  get_url:
+    url: https://symantec.tbs-certificats.com/vsign-universal-root.crt
+    dest: '{{ output_dir }}/common/VeriSignUniversalRoot.crt'
+    checksum: sha256:2de340400722f15d90e11b08cf9f3bfaa7f15eca7151f5a9c3eb8e7a6588da30
+  register: verisign_root_cert
   run_once: True
 
 - name: download Virtio ISO
@@ -149,8 +158,10 @@
     -o {{ secondary_iso_src | quote }}
     {{ (output_dir ~ '/' ~ inventory_hostname ~ '/iso') | quote }}
     {{ (output_dir ~ '/common/MicrosoftCodeVerifRoot.crt') | quote }}
+    {{ (output_dir ~ '/common/VeriSignUniversalRoot.crt') | quote }}
   when: >-
     verif_root_cert is changed or
+    verisign_root_cert is changed or
     (inventory_hostname == '2012' and wmf3_hotfix is changed) or
     downloaded_updates is changed or
     iso_template_files is changed

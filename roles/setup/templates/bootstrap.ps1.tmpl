@@ -61,14 +61,20 @@ Function Get-VirtIODriverPath {
     param (
         [Parameter(Mandatory)]
         [String]
-        $Name
+        $Name,
+
+        [Parameter()]
+        [String]
+        $HostKey
     )
 
-    $hostKey = '{{ driver_host_string }}'
+    if (-not $HostKey) {
+        $HostKey = '{{ driver_host_string }}'
+    }
     $architecture = $env:PROCESSOR_ARCHITECTURE
 
     Get-PSDrive -PSProvider FileSystem | ForEach-Object -Process {
-        Get-ChildItem -LiteralPath "$($_.Root)\$Name\$hostKey\$architecture" -Filter '*.inf' -ErrorAction SilentlyContinue
+        Get-ChildItem -LiteralPath "$($_.Root)\$Name\$HostKey\$architecture" -Filter '*.inf' -ErrorAction SilentlyContinue
     } | Select-Object -First 1 -ExpandProperty FullName
 }
 
@@ -101,6 +107,63 @@ Function Import-Certificate {
     }
 }
 
+Function Install-Driver {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Name,
+
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Path
+    )
+
+    Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+
+namespace PackerWindoze
+{
+    public class NativeMethods
+    {
+        [DllImport("Newdev.dll", EntryPoint = "DiInstallDriverW", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool NativeDiInstallDriverW(
+            IntPtr hwndParent,
+            string InfPath,
+            UInt32 Flags,
+            out bool NeedReboot);
+
+        public static bool DiInstallDriverW(string infPath)
+        {
+            bool needsReboot;
+            if (!NativeDiInstallDriverW(IntPtr.Zero, infPath, 0, out needsReboot))
+            {
+                int err = Marshal.GetLastWin32Error();
+                if (err != 0x00000103)  // Is returned if the driver is already present
+                    throw new Win32Exception(err);
+                else
+                    needsReboot = false;
+            }
+
+            return needsReboot;
+        }
+    }
+}
+'@
+
+    $certDir = Split-Path -Path $Path -Parent
+    $catPath = Get-ChildItem -Path $certDir -Filter '*.cat' -File
+    $driverCert = (Get-AuthenticodeSignature -LiteralPath $catPath.FullName).SignerCertificate
+    if ($driverCert) {
+        Import-Certificate -Cert $driverCert -Store TrustedPublisher
+    }
+
+    Write-Log -Message "Installing driver at '$Path'"
+    [PackerWindoze.NativeMethods]::DiInstallDriverW($Path)
+}
+
 $tmpdir = 'C:\Windows\TEMP'
 Write-Log -Message "Starting bootstrap.ps1 with action '$Action'"
 
@@ -108,75 +171,115 @@ $bootstrapActions = @(
 {% if inventory_hostname == '2012' %}
 {# 2012 comes with pwsh v3 which requires a once off hostfix #}
     @{
-        Name = 'WMFv3 Memory Hotfix'
-        File = 'KB2842230-wmfv3.zip'
+        Name           = 'WMFv3 Memory Hotfix'
+        File           = 'KB2842230-wmfv3.zip'
         ZipFilePattern = '*KB2842230*.msu'
-        Action = 'install'
+        Action         = 'install'
     },
 {% endif %}
 {% for update in update_files | default([]) %}
     @{
-        Name = '{{ update.title }}'
-        File = '{{ update.filename }}'
+        Name   = '{{ update.title }}'
+        File   = '{{ update.filename }}'
         Action = 'install'
     },
 {% endfor %}
 {% if platform in ['qemu', 'virtualbox'] %}
     @{
-        Name = "Red Hat Virtio Network Driver"
-        Path = (Get-VirtIODriverPath -Name NetKVM)
+        Name   = "Red Hat Virtio Network Driver"
+        Path   = (Get-VirtIODriverPath -Name NetKVM)
         Action = "driver"
     }
 {% endif %}
 {% if platform == 'qemu' %}
     @{
-        Name = "Red Hat Virtio SCSI driver"
-        Path = (Get-VirtIODriverPath -Name vioscsi)
+        Name   = "Red Hat Virtio Memory Memory Balloon Driver"
+        Path   = (Get-VirtIODriverPath -Name Balloon)
         Action = "driver"
     },
+{% if inventory_hostname != '2012' %}
+{# FUTURE: VirtIO has invalid metadata for this with 2012 #}
     @{
-        Name = "Red Hat Virtio RNG driver"
-        Path = (Get-VirtIODriverPath -Name viorng)
+        Name   = "Red Hat Virtio FwCfg"
+        Path   = (Get-VirtIODriverPath -Name fwcfg)
         Action = "driver"
     },
+{% endif %}
     @{
-        Name = "Red Hat Virtio serial driver"
-        Path = (Get-VirtIODriverPath -Name vioserial)
-        Action = "driver"
-    },
-    @{
-        Name = "Red Hat Virtio Memory Memory Balloon Driver"
-        Path = (Get-VirtIODriverPath -Name Balloon)
-        Action = "driver"
-    },
-    @{
-        Name = "Red Hat Virtio pvpanic driver"
-        Path = (Get-VirtIODriverPath -Name pvpanic)
-        Action = "driver"
-    },
-    @{
-        Name = "Red Hat Virtio Graphics Driver"
-        Path = (Get-VirtIODriverPath -Name qxldod)
-        Action = "driver"
-    },
-    @{
-        Name = "Red Hat Virtio VIOInput driver"
-        Path = (Get-VirtIODriverPath -Name vioinput)
-        Action = "driver"
-    },
-    @{
-        Name = "Red Hat Virtio PCI serial"
-        Path = (Get-VirtIODriverPath -Name qemupciserial)
+        Name   = "Red Hat Virtio pvpanic driver"
+        Path   = (Get-VirtIODriverPath -Name pvpanic)
         Action = "driver"
     },
 {% if inventory_hostname not in ['2012', '2012r2'] %}
 {# qemufwcfg only valid for 2016+ #}
     @{
-        Name = "Red Hat Virtio Firmware Config Driver"
-        Path = (Get-VirtIODriverPath -Name qemufwcfg)
+        Name   = "Red Hat Virtio Firmware Config Driver"
+        Path   = (Get-VirtIODriverPath -Name qemufwcfg)
         Action = "driver"
     },
 {% endif %}
+    @{
+        Name   = "Red Hat Virtio PCI serial"
+        Path   = (Get-VirtIODriverPath -Name qemupciserial)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio Graphics Driver"
+        # FUTURE: Remove -HostKey once 2k22 support is in virtio
+        Path   = (Get-VirtIODriverPath -Name qxldod{{ ' -HostKey 2k19' if inventory_hostname == '2022' else '' }})
+        Action = "driver"
+    },
+{% if inventory_hostname in ['2022'] %}
+{# qemufwcfg only valid for 2022 #}
+    @{
+        Name   = "Red Hat Virtio Q35 SMBus driver"
+        Path   = (Get-VirtIODriverPath -Name smbus)
+        Action = "driver"
+    },
+{% endif %}
+{% if inventory_hostname != '2012' %}
+{# Not available for 2012 #}
+    @{
+        Name   = "Red Hat Virtio SRIOV NetKVM"
+        Path   = (Get-VirtIODriverPath -Name sriov)
+        Action = "driver"
+    },
+{% endif %}
+    @{
+        Name   = "Red Hat Virtio FS"
+        Path   = (Get-VirtIODriverPath -Name viofs)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio GPU DOD"
+        Path   = (Get-VirtIODriverPath -Name viogpudo)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio VIOInput driver"
+        Path   = (Get-VirtIODriverPath -Name vioinput)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio RNG driver"
+        Path   = (Get-VirtIODriverPath -Name viorng)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio SCSI driver"
+        Path   = (Get-VirtIODriverPath -Name vioscsi)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio serial driver"
+        Path   = (Get-VirtIODriverPath -Name vioserial)
+        Action = "driver"
+    },
+    @{
+        Name   = "Red Hat Virtio SCSI controller"
+        Path   = (Get-VirtIODriverPath -Name viostor)
+        Action = "driver"
+    },
 {% endif %}
     @{
         Name = "Configure WinRM"
@@ -250,39 +353,6 @@ for ($i = 0; $i -lt $actualActions.Count; $i++) {
 
         driver {
             Write-Log -Message "Installing driver $($currentAction.Name)"
-            Add-Type -TypeDefinition @'
-using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
-
-namespace PackerWindoze
-{
-    public class NativeMethods
-    {
-        [DllImport("Newdev.dll", EntryPoint = "DiInstallDriverW", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool NativeDiInstallDriverW(
-            IntPtr hwndParent,
-            string InfPath,
-            UInt32 Flags,
-            out bool NeedReboot);
-
-        public static bool DiInstallDriverW(string infPath)
-        {
-            bool needsReboot;
-            if (!NativeDiInstallDriverW(IntPtr.Zero, infPath, 0, out needsReboot))
-            {
-                int err = Marshal.GetLastWin32Error();
-                if (err != 0x00000103)  // Is returned if the driver is already present
-                    throw new Win32Exception(err);
-                else
-                    needsReboot = false;
-            }
-
-            return needsReboot;
-        }
-    }
-}
-'@
 
             # Older hosts may not have the root Microsoft cert that has signed the VirtIO drivers installed. We
             # manually install it so we can install the driver silently without user interaction.
@@ -290,27 +360,19 @@ namespace PackerWindoze
             $rootCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $rootCertPath
             Import-Certificate -Cert $rootCert -Store Root
 
-            $catPath = Get-ChildItem -Path (Split-Path -Path $currentAction.Path -Parent) -Filter '*.cat' -File
-            $driverCert = (Get-AuthenticodeSignature -LiteralPath $catPath.FullName).SignerCertificate
-            if ($driverCert) {
-                Import-Certificate -Cert $driverCert -Store TrustedPublisher
-            }
+            # Hosts also seem to be missing the VeriSign Universal Root Cert used by some VirtIO drivers.
+            # FUTURE: See if this can be removed once updating VirtIO to a newer version
+            $rootCertPath = Join-Path $PSScriptRoot 'VeriSignUniversalRoot.crt'
+            $rootCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $rootCertPath
+            Import-Certificate -Cert $rootCert -Store Root
 
-            $rebootRequired = [PackerWindoze.NativeMethods]::DiInstallDriverW($currentAction.Path)
+            $rebootRequired = Install-Driver -Name $currentAction.Name -Path $currentAction.Path
             if ($rebootRequired) {
                 Restart-AndResume -Action $nextAction.Name
             }
         }
 
         winrm {
-{% if platform == 'virtualbox' and inventory_hostname == '2022' %}
-{# Bug in NetKVM for Server 2022 - https://github.com/virtio-win/kvm-guest-drivers-windows/issues/583 #}
-            Write-Log -Message "Disabling Offload Tx Checksum for NetKVM adapter"
-            Get-NetAdapter |
-                Where-Object DriverFileName -eq 'netkvm.sys' |
-                Set-NetAdapterAdvancedProperty -RegistryKeyword 'Offload.TxChecksum' -RegistryValue 0
-
-{% endif %}
 {% if platform == 'hyperv' %}
             $ipAddr = '{{ hyperv_ip }}'
             Write-Log -Message "Setting IP address to $ipAddr"
