@@ -1,6 +1,6 @@
 roles:
 - src: jborean93.win_openssh
-  version: v0.3.0
+  version: v0.3.2
 
 collections:
 - name: ansible.windows

@@ -71,13 +71,6 @@ switch( $action) {
         Write-Log -Message "Setting the rearm key back to 0 so people in the future can rearm the OS"
         Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform" -Name SkipRearm -Value 0
 
-{% if platform == 'virtualbox' and inventory_hostname == 'win-2022' %}
-{# Bug in NetKVM for Server 2022 - https://github.com/virtio-win/kvm-guest-drivers-windows/issues/583 #}
-        Write-Log -Message "Disabling Offload Tx Checksum for NetKVM adapter"
-        Get-NetAdapter |
-            Where-Object DriverFileName -eq 'netkvm.sys' |
-            Set-NetAdapterAdvancedProperty -RegistryKeyword 'Offload.TxChecksum' -RegistryValue 0
-{% endif %}
         Write-Log -Message "Recreate the WinRM listeners"
         Reset-WinRMConfig -Verbose
 

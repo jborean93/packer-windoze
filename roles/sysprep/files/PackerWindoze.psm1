@@ -113,13 +113,13 @@ Function New-FirewallRule {
             $action = 0  # Deny
         }
         $ruleDetails = @{
-            LocalPorts = $Port
-            RemotePorts = "*"
-            LocalAddresses = "*"
-            Enabled = $true
-            Direction = 1
-            Action = $action
-            Grouping = "Windows Remote Management"
+            LocalPorts      = $Port
+            RemotePorts     = "*"
+            LocalAddresses  = "*"
+            Enabled         = $true
+            Direction       = 1
+            Action          = $action
+            Grouping        = "Windows Remote Management"
             ApplicationName = "System"
         }
         $rule.Protocol = 6
@@ -140,13 +140,15 @@ Function New-FirewallRule {
             Write-Verbose -Message "Firewall rule $($rule.Name) needs to be (re)created as config does not match expectation"
             try {
                 $fw.Rules.Add($rule)
-            } catch [System.Runtime.InteropServices.COMException] {
+            }
+            catch [System.Runtime.InteropServices.COMException] {
                 # E_UNEXPECTED 0x80000FFFF means the rule already exists
                 if ($_.Exception.ErrorCode -eq 0x8000FFFF) {
                     Write-Verbose -Message "Firewall rule $($rule.Name) already exists, deleting before recreating"
                     $fw.Rules.Remove($rule.Name)
                     $fw.Rules.Add($rule)
-                } else {
+                }
+                else {
                     Write-Verbose -Message "Failed to add firewall rule $($rule.Name): $($_.Exception.Message)"
                     throw $_
                 }
@@ -157,7 +159,7 @@ Function New-FirewallRule {
 
 Function Remove-FirewallRule {
     param(
-        [Parameter(mandatory=$true)][String]$Name
+        [Parameter(mandatory = $true)][String]$Name
     )
     $fw = New-Object -ComObject HNetCfg.FWPolicy2
 
@@ -242,7 +244,7 @@ Function Reset-WinRMConfig {
     Write-Verbose -Message "Creating HTTP listener"
     $selectorSet = @{
         Transport = "HTTP"
-        Address = "*"
+        Address   = "*"
     }
     $valueSet = @{
         Enabled = $true
@@ -252,25 +254,29 @@ Function Reset-WinRMConfig {
     Write-Verbose -Message "Creating HTTPS listener"
     if ($CertificateThumbprint) {
         $thumbprint = $CertificateThumbprint
-    } else {
+    }
+    else {
         $certificate = New-LegacySelfSignedCert -Subject $env:COMPUTERNAME -ValidDays 1095
         $thumbprint = $certificate.Thumbprint
     }
     $selectorSet = @{
         Transport = "HTTPS"
-        Address = "*"
+        Address   = "*"
     }
     $valueSet = @{
         CertificateThumbprint = $thumbprint
-        Enabled = $true
+        Enabled               = $true
     }
     New-WSManInstance -ResourceURI winrm/config/Listener -SelectorSet $selectorSet -ValueSet $valueSet > $null
 
+    Write-Verbose -Message "Setting WinRM CredSSP certificate thumbprint"
+    Set-Item -Path WSMan:\localhost\Service\CertificateThumbprint -Value $thumbprint
+
     Write-Verbose -Message "Configuring WinRM HTTPS firewall rule"
     $firewallArgs = @{
-        Name = 'Windows Remote Management (HTTPS-In)'
+        Name        = 'Windows Remote Management (HTTPS-In)'
         Description = 'Inbound rule for Windows Remote Management via WS-Management. [TCP 5986]'
-        Port = 5986
+        Port        = 5986
     }
     New-FirewallRule @firewallArgs
 
@@ -287,8 +293,8 @@ Function Reset-WinRMConfig {
 
     Write-Verbose -Message "Testing out WinRM communication over localhost"
     $invokeArgs = @{
-        ComputerName = "localhost"
-        ScriptBlock = { $env:COMPUTERNAME }
+        ComputerName  = "localhost"
+        ScriptBlock   = { $env:COMPUTERNAME }
         SessionOption = (New-PSSessionOption -SkipCACheck -SkipCNCheck -SkipRevocationCheck)
     }
     Invoke-Command @invokeArgs > $null

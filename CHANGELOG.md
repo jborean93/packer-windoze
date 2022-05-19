@@ -6,6 +6,15 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v1.1.0 - 2022-05-19
+
+* Update the `PSReadLine`, `PowerShellGet`, and `PackageManagement` modules to the latest version
+* Set certificate used for CredSSP over WinRM to be the same one used for the HTTPS listener.
+* Updated OpenSSH version to [v8.9.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.9.1.0p1-Beta).
+* Updated VirtIO driver version to `0.1.215-2`.
+* 2022
+    * Used new ISO with latest updates
+
 ### v1.0.0 - 2021-06-19
 
 * Removed Packer as part of the build process, this runs using Ansible only.

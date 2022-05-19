@@ -43,7 +43,7 @@
       -m 2048M
       -vga qxl
       -display {{ headless | ternary('none', 'gtk') }}
-      -spice port={{ (guest_port | int) + 1 }},addr=127.0.0.1,disable-ticketing
+      -spice port={{ (guest_port | int) + 1 }},addr=127.0.0.1,disable-ticketing=on
       -device virtio-serial-pci
       -device virtserialport,chardev=spicechannel{{ inventory_hostname }}0,name=com.redhat.spice.0
       -chardev spicevmc,id=spicechannel{{ inventory_hostname }}0,name=vdagent

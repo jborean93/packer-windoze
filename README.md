@@ -24,12 +24,13 @@ _Note: This repo used to use Packer to build the Vagrant images (hence the name)
 To use the scripts in this repo you will need the following;
 
 * [Ansible](https://github.com/ansible/ansible) >= 2.9.0
-* `mkisofs`
-* `pigz`
+* `mkisofs` to build the bootstrapping iso for Windows
+* `pigz` to compress the resulting Vagrant box image
 
 The following Python libraries are also used:
 
 * [httpx](https://pypi.org/project/httpx/)
+* [psutil](https://pypi.org/project/psutil/)
 * [pypsrp](https://pypi.org/project/pypsrp/)
 * [BeautifulSoup4](https://www.crummy.com/software/BeautifulSoup/) to retrieve the latest Windows Updates for the build
 
@@ -49,12 +50,19 @@ sudo apt-get install mkisofs pigz
 sudo yum install mkisofs pigz
 
 # for Fedora
-sudo dnf install mkisofs pigz
+sudo dnf install genisoimage pigz
 
 # for MacOS (requires Homebrew)
 brew install cdrtools pigz
 ```
 
+The Ansible requirements can be installed with
+
+```bash
+pip install -r requirements.txt
+ansible-galaxy role install -r requirements.yml -p roles
+ansible-galaxy collection install -r requirements.yml -p collections
+```
 
 ## How to Run
 
@@ -62,7 +70,7 @@ The imaging process uses Ansible from start to finish and in most cases can be r
 To start the process run the following script:
 
 ```bash
-ansible-playbook main.yml --limit '*2022'`
+ansible-playbook main.yml --limit '*2022'
 ```
 
 This will build the Windows Server 2022 image for QEMU.
@@ -70,6 +78,7 @@ You can change `*2022` to the Windows version as defined in inventory.yml that y
 The following options can also be specified with `-e` to change the build behaviour:
 
 * `platform`: The Hypervisor to build for - can be `qemu`, `virtualbox`, or `hyperv` (default: `qemu`).
+* `headless`: Dont't display the VM console during the build process (default: `true`)
 * `output_dir`: The base directory to store the output/build files (default: `{{ playbook_dir }}/output`).
 * `setup_username`: The name of the user to create on the base image
 * `setup_password`: The password to apply to the username that is created.

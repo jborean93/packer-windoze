@@ -1,5 +1,15 @@
 # This generates CHANGELOG.md and changelog entries in the box description
 changelog:
+- version: '1.1.0'
+  date: 2022-05-19
+  changes:
+  - Update the `PSReadLine`, `PowerShellGet`, and `PackageManagement` modules to the latest version
+  - Set certificate used for CredSSP over WinRM to be the same one used for the HTTPS listener.
+  - Updated OpenSSH version to [v8.9.1.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v8.9.1.0p1-Beta).
+  - Updated VirtIO driver version to `0.1.215-2`.
+  host_specific_changes:
+    '2022':
+    - Used new ISO with latest updates
 - version: '1.0.0'
   date: 2021-06-19
   changes:
