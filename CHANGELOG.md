@@ -6,6 +6,17 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
+### v1.2.0 - 2023-10-16
+
+* Bumped minimum Ansible version to `2.13` and `ansible.windows` to `2.1.0`
+* Updated OpenSSH version to [v9.4.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v9.4.0.0p1-Beta)
+* Updated VirtIO driver version to `0.1.240-1` for Server 2016 and newer
+* Install .NET Framework 4.8 (4.8.1 on Server 2022) to satisfy new Chocolatey requirements
+* Configure default Vagrantfile to use Basic auth over TLS due to newer hosts not allowing MD4 hashes required by NTLM
+* Configure QEMU templates to use USB3 as the USB controller
+* Updated Pester from 3.4.0 to latest version
+* This will be the last update for Server 2012 and 2012 R2 as they are now end of life
+
 ### v1.1.0 - 2022-05-19
 
 * Update the `PSReadLine`, `PowerShellGet`, and `PackageManagement` modules to the latest version

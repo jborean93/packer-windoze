@@ -46,13 +46,14 @@
       -spice port={{ (guest_port | int) + 1 }},addr=127.0.0.1,disable-ticketing=on
       -device virtio-serial-pci
       -device virtserialport,chardev=spicechannel{{ inventory_hostname }}0,name=com.redhat.spice.0
+      -device qemu-xhci
       -chardev spicevmc,id=spicechannel{{ inventory_hostname }}0,name=vdagent
       -usb -device usb-tablet
       -netdev user,id=user0,hostfwd=tcp::{{ guest_port }}-:5985
       -device virtio-net,netdev=user0
       -drive file={{ iso_src | quote }},index=0,media=cdrom
       -drive file={{ secondary_iso_src | quote }},index=1,media=cdrom
-      -drive file={{ (output_dir ~ '/common/virtio-win.iso') | quote }},index=2,media=cdrom
+      -drive file={{ (output_dir ~ '/common/virtio-win-' ~ virtio_version ~ '.iso') | quote }},index=2,media=cdrom
       -drive file={{ (output_dir ~ '/' ~ inventory_hostname ~ '/qemu/' ~ inventory_hostname ~ '-vm.qcow2') | quote }},if=virtio,cache=writeback,discard=ignore,format=qcow2
       -boot once=d
       -daemonize

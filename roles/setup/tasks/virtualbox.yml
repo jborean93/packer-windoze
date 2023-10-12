@@ -78,7 +78,7 @@
       type: dvddrive
     - path: '{{ secondary_iso_src }}'
       type: dvddrive
-    - path: '{{ output_dir }}/common/virtio-win.iso'
+    - path: '{{ output_dir }}/common/virtio-win-{{ virtio_version }}.iso'
       type: dvddrive
     - path: '{{ output_dir }}/common/VBoxGuestAdditions.iso'
       type: dvddrive

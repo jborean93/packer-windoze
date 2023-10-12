@@ -20,6 +20,7 @@
   - C:\Temp
   - C:\Windows\Panther
   - C:\Windows\Temp
+  - C:\Users\{{ ansible_user }}\.ansible_async
 
 # win_file does not work with hidden folders
 - name: cleanup the C:\Recovery folder

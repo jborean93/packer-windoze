@@ -69,14 +69,26 @@
     url: https://symantec.tbs-certificats.com/vsign-universal-root.crt
     dest: '{{ output_dir }}/common/VeriSignUniversalRoot.crt'
     checksum: sha256:2de340400722f15d90e11b08cf9f3bfaa7f15eca7151f5a9c3eb8e7a6588da30
+    validate_certs: false
   register: verisign_root_cert
+  when:
+  - platform == 'virtualbox'
+  - inventory_hostname in ['2012', '2012r2']
   run_once: True
 
 - name: download Virtio ISO
   get_url:
     url: https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-{{ virtio_version }}/virtio-win.iso
-    dest: '{{ output_dir }}/common/virtio-win.iso'
+    dest: '{{ output_dir }}/common/virtio-win-{{ virtio_version }}.iso'
   when: platform != 'hyperv'
+  run_once: True
+
+- name: download .NET Framework 4.8.x offline installer
+  get_url:
+    url: '{{ dotnet_framework.url }}'
+    dest: '{{ output_dir }}/common/{{ dotnet_framework.filename }}'
+    checksum: sha256:{{ dotnet_framework.checksum }}
+  register: dotfx_installer
   run_once: True
 
 - name: create host specific build directory
@@ -150,18 +162,36 @@
   set_fact:
     secondary_iso_src: '{{ output_dir }}/{{ inventory_hostname }}/{{ inventory_hostname }}-secondary.iso'
 
+- name: set files to be placed in secondary iso fact
+  set_fact:
+    secondary_iso_files:
+    - '{{ output_dir }}/{{ inventory_hostname }}/iso'
+    - '{{ output_dir }}/common/MicrosoftCodeVerifRoot.crt'
+    - '{{ output_dir }}/common/{{ dotnet_framework.filename }}'
+
+- name: add VerisignUniversalRoot for Server 2012 and 2012 R2 on Virtualbox
+  set_fact:
+    secondary_iso_files: >-
+      {{
+          secondary_iso_files + [
+            output_dir ~ '/common/VeriSignUniversalRoot.crt'
+          ]
+      }}
+  when:
+  - platform == 'virtualbox'
+  - inventory_hostname in ['2012', '2012r2']
+
 - name: create secondary iso
   command: >-
     mkisofs -RJ -l
     -input-charset iso8859-1
     -quiet
     -o {{ secondary_iso_src | quote }}
-    {{ (output_dir ~ '/' ~ inventory_hostname ~ '/iso') | quote }}
-    {{ (output_dir ~ '/common/MicrosoftCodeVerifRoot.crt') | quote }}
-    {{ (output_dir ~ '/common/VeriSignUniversalRoot.crt') | quote }}
+    {{ secondary_iso_files | map('quote') | join(' ') }}
   when: >-
     verif_root_cert is changed or
     verisign_root_cert is changed or
+    dotfx_installer is changed or
     (inventory_hostname == '2012' and wmf3_hotfix is changed) or
     downloaded_updates is changed or
     iso_template_files is changed

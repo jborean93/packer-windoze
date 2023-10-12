@@ -6,29 +6,12 @@
     data: 0
     type: dword
 
-- name: enable verbose logging (WUA seems to fail on some installs without this)
-  win_regedit:
-    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Trace
-    name: '{{ item.name }}'
-    data: '{{ item.data }}'
-    type: dword
-  loop:
-  - name: Flags
-    data: 7
-  - name: Level
-    data: 4
-
 - name: install updates and reboot along the way
   win_updates:
     category_names: '*'
     state: installed
-    reboot: yes
-
-- name: remove verbose Windows Update logging
-  win_regedit:
-    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Trace
-    state: absent
-    delete_key: yes
+    reboot: true
+    log_path: C:\Windows\TEMP\win_updates.log
 
 - name: stop the Windows Update service
   win_service:

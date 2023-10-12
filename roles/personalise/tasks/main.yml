@@ -210,7 +210,12 @@
   when:
   - inventory_hostname not in ['win-2012', 'win-2012r2']
   block:
-  - name: install newer versions of PowerShellGet, PackageManagement, and PSReadLine
+  - name: remove the older Pester install
+    ansible.windows.win_file:
+      path: C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.0
+      state: absent
+
+  - name: install newer versions of Pester, PowerShellGet, PackageManagement, and PSReadLine
     ansible.windows.win_powershell:
       script: |
         [CmdletBinding()]
@@ -227,7 +232,7 @@
             $Ansible.Changed = $true
         }
 
-        foreach ($package in @("PackageManagement", "PowerShellGet", "PSReadLine")) {
+        foreach ($package in @("Pester", "PackageManagement", "PowerShellGet", "PSReadLine")) {
             $latestVersion = Find-Module -Name $package -AllVersions -ErrorAction SilentlyContinue |
                 Sort-Object -Property Version -Descending |
                 Select-Object -ExpandProperty Version -First 1
@@ -242,7 +247,9 @@
             $Ansible.Changed = $true
 
             # Output for the next task to remove
-            $installedVersions.ModuleBase
+            if ($installedVersions) {
+                $installedVersions.ModuleBase
+            }
         }
     register: pri_personalize_pwsh_packages
 

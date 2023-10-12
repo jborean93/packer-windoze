@@ -6,6 +6,10 @@ Vagrant.configure(2) do |config|
   config.vm.communicator = "winrm"
   config.winrm.username = "{{ setup_username }}"
   config.winrm.password = "{{ setup_password }}"
+  # Use Basic auth over HTTPS for auth due to issues with NTLM and MD4
+  config.winrm.transport = :ssl
+  config.winrm.basic_auth_only = true
+  config.winrm.ssl_peer_verification = false
   config.vm.boot_timeout = 600
   config.vm.network :forwarded_port, guest: 3389, host: 3389, id: 'rdp', auto_correct: true
   config.vm.network :forwarded_port, guest: 22, host: 2222, id: 'ssh', auto_correct: true
@@ -38,7 +42,8 @@ Vagrant.configure(2) do |config|
     l.hyperv_feature :name => 'vapic', :state => 'on'
     l.input :type => "tablet", :bus => "usb"
     l.memory = 2048
-    l.nic_model_type = "virtio"
+    l.nic_model_type = 'virtio'
+    l.usb_controller :model => 'qemu-xhci'
     l.video_type = 'qxl'
   end
 end

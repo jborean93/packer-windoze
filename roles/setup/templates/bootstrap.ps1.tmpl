@@ -7,7 +7,7 @@ param (
 $ErrorActionPreference = 'Stop'
 
 trap {
-    $msg = "Unhandled exception`r`rn$($_ | Out-String)`r`n$($_.ScriptStackTrace)"
+    $msg = "Unhandled exception`r`n$($_ | Out-String)`r`n$($_.ScriptStackTrace)"
     Write-Log -Message $msg -Level Error
     Write-Error -ErrorRecord $_ -ErrorAction Continue
 
@@ -65,7 +65,11 @@ Function Get-VirtIODriverPath {
 
         [Parameter()]
         [String]
-        $HostKey
+        $HostKey,
+
+        [Parameter()]
+        [String]
+        $InfFile
     )
 
     if (-not $HostKey) {
@@ -73,8 +77,12 @@ Function Get-VirtIODriverPath {
     }
     $architecture = $env:PROCESSOR_ARCHITECTURE
 
+    if (-not $InfFile) {
+        $InfFile = "$Name.inf"
+    }
+
     Get-PSDrive -PSProvider FileSystem | ForEach-Object -Process {
-        Get-ChildItem -LiteralPath "$($_.Root)\$Name\$HostKey\$architecture" -Filter '*.inf' -ErrorAction SilentlyContinue
+        Get-ChildItem -LiteralPath "$($_.Root)\$Name\$HostKey\$architecture" -Filter $InfFile -ErrorAction SilentlyContinue
     } | Select-Object -First 1 -ExpandProperty FullName
 }
 
@@ -154,7 +162,8 @@ namespace PackerWindoze
 '@
 
     $certDir = Split-Path -Path $Path -Parent
-    $catPath = Get-ChildItem -Path $certDir -Filter '*.cat' -File
+    $driverName = (Get-Item -LiteralPath $Path).BaseName
+    $catPath = Get-ChildItem -Path $certDir -Filter "$driverName.cat" -File
     $driverCert = (Get-AuthenticodeSignature -LiteralPath $catPath.FullName).SignerCertificate
     if ($driverCert) {
         Import-Certificate -Cert $driverCert -Store TrustedPublisher
@@ -175,15 +184,21 @@ $bootstrapActions = @(
         File           = 'KB2842230-wmfv3.zip'
         ZipFilePattern = '*KB2842230*.msu'
         Action         = 'install'
-    },
+    }
 {% endif %}
 {% for update in update_files | default([]) %}
     @{
         Name   = '{{ update.title }}'
         File   = '{{ update.filename }}'
         Action = 'install'
-    },
+    }
 {% endfor %}
+    @{
+        Name      = '.NET Framework 4.8'
+        File      = '{{ dotnet_framework.filename }}'
+        Arguments = '/quiet /norestart'
+        Action    = 'install'
+    }
 {% if platform in ['qemu', 'virtualbox'] %}
     @{
         Name   = "Red Hat Virtio Network Driver"
@@ -196,90 +211,90 @@ $bootstrapActions = @(
         Name   = "Red Hat Virtio Memory Memory Balloon Driver"
         Path   = (Get-VirtIODriverPath -Name Balloon)
         Action = "driver"
-    },
+    }
 {% if inventory_hostname != '2012' %}
 {# FUTURE: VirtIO has invalid metadata for this with 2012 #}
     @{
         Name   = "Red Hat Virtio FwCfg"
         Path   = (Get-VirtIODriverPath -Name fwcfg)
         Action = "driver"
-    },
+    }
 {% endif %}
     @{
         Name   = "Red Hat Virtio pvpanic driver"
         Path   = (Get-VirtIODriverPath -Name pvpanic)
         Action = "driver"
-    },
+    }
 {% if inventory_hostname not in ['2012', '2012r2'] %}
 {# qemufwcfg only valid for 2016+ #}
     @{
         Name   = "Red Hat Virtio Firmware Config Driver"
         Path   = (Get-VirtIODriverPath -Name qemufwcfg)
         Action = "driver"
-    },
+    }
 {% endif %}
     @{
         Name   = "Red Hat Virtio PCI serial"
         Path   = (Get-VirtIODriverPath -Name qemupciserial)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio Graphics Driver"
         # FUTURE: Remove -HostKey once 2k22 support is in virtio
         Path   = (Get-VirtIODriverPath -Name qxldod{{ ' -HostKey 2k19' if inventory_hostname == '2022' else '' }})
         Action = "driver"
-    },
+    }
 {% if inventory_hostname in ['2022'] %}
 {# qemufwcfg only valid for 2022 #}
     @{
         Name   = "Red Hat Virtio Q35 SMBus driver"
         Path   = (Get-VirtIODriverPath -Name smbus)
         Action = "driver"
-    },
+    }
 {% endif %}
 {% if inventory_hostname != '2012' %}
 {# Not available for 2012 #}
     @{
         Name   = "Red Hat Virtio SRIOV NetKVM"
-        Path   = (Get-VirtIODriverPath -Name sriov)
+        Path   = (Get-VirtIODriverPath -Name sriov -InfFile vioprot.inf)
         Action = "driver"
-    },
+    }
 {% endif %}
     @{
         Name   = "Red Hat Virtio FS"
         Path   = (Get-VirtIODriverPath -Name viofs)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio GPU DOD"
         Path   = (Get-VirtIODriverPath -Name viogpudo)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio VIOInput driver"
         Path   = (Get-VirtIODriverPath -Name vioinput)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio RNG driver"
         Path   = (Get-VirtIODriverPath -Name viorng)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio SCSI driver"
         Path   = (Get-VirtIODriverPath -Name vioscsi)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio serial driver"
-        Path   = (Get-VirtIODriverPath -Name vioserial)
+        Path   = (Get-VirtIODriverPath -Name vioserial -InfFile vioser.inf)
         Action = "driver"
-    },
+    }
     @{
         Name   = "Red Hat Virtio SCSI controller"
         Path   = (Get-VirtIODriverPath -Name viostor)
         Action = "driver"
-    },
+    }
 {% endif %}
     @{
         Name = "Configure WinRM"
@@ -321,14 +336,14 @@ for ($i = 0; $i -lt $actualActions.Count; $i++) {
                 }
             }
 
-            $arguments = ''
+            $arguments = New-Object -TypeName System.Text.StringBuilder
             if ($src.EndsWith('.msu', 'OrdinalIgnoreCase')) {
-                $arguments = '"{0}" /quiet /norestart' -f $src
+                $null = $arguments.Append(('"{0}" /quiet /norestart' -f $src))
                 $src = 'wusa.exe'
             }
             if ($currentAction.Arguments) {
-                if ($arguments) { $arguments += ' ' }
-                $arguments += $currentActions.Arguments
+                if ($arguments.Length) { $null = $arguments.Append(' ') }
+                $null = $arguments.Append($currentAction.Arguments)
             }
 
             $procParams = @{
@@ -337,9 +352,10 @@ for ($i = 0; $i -lt $actualActions.Count; $i++) {
                 Wait = $true
                 PassThru = $true
             }
-            if ($arguments) {
-                $procParams.ArgumentList = $arguments
+            if ($arguments.Length) {
+                $procParams.ArgumentList = $arguments.ToString()
             }
+            Write-Log -Message "Running '$($procParams.FilePath)' with the arguments '$($procParams.ArgumentList)'"
 
             $proc = Start-Process @procParams
             $rc = $proc.ExitCode
@@ -360,11 +376,15 @@ for ($i = 0; $i -lt $actualActions.Count; $i++) {
             $rootCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $rootCertPath
             Import-Certificate -Cert $rootCert -Store Root
 
-            # Hosts also seem to be missing the VeriSign Universal Root Cert used by some VirtIO drivers.
-            # FUTURE: See if this can be removed once updating VirtIO to a newer version
+            # 2012 and 2012 R2 on VirtualBox require this root cert to be
+            # installed for it to view the NetKVM driver as valid.
             $rootCertPath = Join-Path $PSScriptRoot 'VeriSignUniversalRoot.crt'
-            $rootCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList $rootCertPath
-            Import-Certificate -Cert $rootCert -Store Root
+            if (Test-Path -LiteralPath $rootCertPath) {
+                $rootCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @(
+                    $rootCertPath
+                )
+                Import-Certificate -Cert $rootCert -Store Root
+            }
 
             $rebootRequired = Install-Driver -Name $currentAction.Name -Path $currentAction.Path
             if ($rebootRequired) {

@@ -50,6 +50,7 @@
       $changed
     args:
       executable: powershell.exe
+    ignore_errors: True
     register: hyperv_vm
     changed_when: hyperv_vm.stdout | trim | bool
 

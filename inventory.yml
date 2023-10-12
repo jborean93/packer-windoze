@@ -5,11 +5,16 @@ all:
         '2012':
           box_tag: jborean93/WindowsServer2012
 
-          iso_src: http://download.microsoft.com/download/6/D/A/6DAB58BA-F939-451D-9101-7DE07DC09C03/9200.16384.WIN8_RTM.120725-1247_X64FRE_SERVER_EVAL_EN-US-HRM_SSS_X64FREE_EN-US_DV5.ISO
+          iso_src: https://download.microsoft.com/download/6/D/A/6DAB58BA-F939-451D-9101-7DE07DC09C03/9200.16384.WIN8_RTM.120725-1247_X64FRE_SERVER_EVAL_EN-US-HRM_SSS_X64FREE_EN-US_DV5.ISO
           iso_checksum: sha256:19c627b6a24554bce45a3b03fc913a0d791d117088c7e953b9c07e866fd88b67
           iso_wim_label: Windows Server 2012 SERVERSTANDARD
           architecture: amd64
           driver_host_string: 2k12
+          virtio_version: '0.1.215-2'
+          dotnet_framework:
+            url: https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe
+            filename: NDP480-x86-x64-AllOS-ENU.exe
+            checksum: 68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f
 
           updates:
             product: Windows Server 2012
@@ -23,11 +28,16 @@ all:
         2012r2:
           box_tag: jborean93/WindowsServer2012R2
 
-          iso_src: http://download.microsoft.com/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO
+          iso_src: https://download.microsoft.com/download/6/2/A/62A76ABB-9990-4EFC-A4FE-C7D698DAEB96/9600.17050.WINBLUE_REFRESH.140317-1640_X64FRE_SERVER_EVAL_EN-US-IR3_SSS_X64FREE_EN-US_DV9.ISO
           iso_checksum: sha256:6612b5b1f53e845aacdf96e974bb119a3d9b4dcb5b82e65804ab7e534dc7b4d5
           iso_wim_label: Windows Server 2012 R2 SERVERSTANDARD
           architecture: amd64
           driver_host_string: 2k12R2
+          virtio_version: '0.1.215-2'
+          dotnet_framework:
+            url: https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe
+            filename: NDP480-x86-x64-AllOS-ENU.exe
+            checksum: 68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f
 
           updates:
             product: Windows Server 2012 R2
@@ -41,11 +51,15 @@ all:
         '2016':
           box_tag: jborean93/WindowsServer2016
 
-          iso_src: https://software-download.microsoft.com/download/pr/Windows_Server_2016_Datacenter_EVAL_en-us_14393_refresh.ISO
+          iso_src: https://software-static.download.prss.microsoft.com/pr/download/Windows_Server_2016_Datacenter_EVAL_en-us_14393_refresh.ISO
           iso_checksum: sha256:1ce702a578a3cb1ac3d14873980838590f06d5b7101c5daaccbac9d73f1fb50f
           iso_wim_label: Windows Server 2016 SERVERSTANDARD
           architecture: amd64
           driver_host_string: 2k16
+          dotnet_framework:
+            url: https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe
+            filename: NDP480-x86-x64-AllOS-ENU.exe
+            checksum: 68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f
 
           updates:
             product: Windows Server 2016
@@ -64,12 +78,15 @@ all:
           iso_wim_label: Windows Server 2019 SERVERSTANDARD
           architecture: amd64
           driver_host_string: 2k19
+          dotnet_framework:
+            url: https://download.visualstudio.microsoft.com/download/pr/2d6bb6b2-226a-4baa-bdec-798822606ff1/8494001c276a4b96804cde7829c04d7f/ndp48-x86-x64-allos-enu.exe
+            filename: NDP480-x86-x64-AllOS-ENU.exe
+            checksum: 68c9986a8dcc0214d909aa1f31bee9fb5461bb839edca996a75b08ddffc1483f
 
           updates:
             product: Windows Server 2019
-            names:
-            - Servicing Stack Update for Windows Server 2019
-            - Cumulative Update for Windows Server 2019
+            names: []  # The CU found doesn't seem to work, will just rely on WU finding it
+            # - Cumulative Update for Windows Server 2019
 
           virtualbox:
             os_type: Windows2019_64
@@ -82,6 +99,11 @@ all:
           iso_wim_label: Windows Server 2022 SERVERSTANDARD
           architecture: amd64
           driver_host_string: 2k22
+          virtio_version: '0.1.229-1'  # smbus on 0.1.240-1 is self signed
+          dotnet_framework:
+            url: https://download.microsoft.com/download/4/b/2/4b21528a-8944-4a9e-b9d4-6474125e540c/NDP481-x86-x64-AllOS-ENU.exe
+            filename: NDP481-x86-x64-AllOS-ENU.exe
+            checksum: 4d7e50ce5a9f692845959d6fe1c4402a45b803efe1f9decbeca589833e05603c
 
           updates:
             product: Microsoft Server operating system-21H2
@@ -90,7 +112,7 @@ all:
             - Cumulative Update for Microsoft server operating system version 21H2
 
           virtualbox:
-            os_type: Windows2019_64  # FUTURE: update once virtualbox does
+            os_type: Windows2022_64
 
       vars:
         ansible_connection: local
@@ -110,8 +132,7 @@ all:
   vars:
     output_dir: '{{ playbook_dir }}/output'
     platform: qemu
-    openssh_version: v8.9.1.0p1-Beta
-    # FUTURE: Update once https://github.com/virtio-win/kvm-guest-drivers-windows/issues/769 is fixed
-    virtio_version: 0.1.215-2
+    openssh_version: v9.4.0.0p1-Beta
+    virtio_version: '0.1.240-1'
     setup_username: vagrant
     setup_password: vagrant

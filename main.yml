@@ -3,15 +3,15 @@
   gather_facts: no
   vars:
     force: False
-    headless: True
+    headless: False
 
   pre_tasks:
-  - name: check that the Ansible version is at least 2.9
+  - name: check that the Ansible version is at least 2.13
     assert:
       that:
       - ansible_version.major >= 2
-      - ansible_version.minor >= 9
-      msg: packer-windoze requires Ansible 2.9 or newer to run, please upgrade or checkout devel before running
+      - ansible_version.minor >= 13
+      msg: packer-windoze requires Ansible 2.13 or newer to run, please upgrade or checkout devel before running
 
   - name: check that the platform is valid
     assert:
