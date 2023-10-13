@@ -6,7 +6,7 @@ changelog entries to `roles/packer-setup/vars/main.yml` to modify this file_
 This is the changelog of each image version uploaded to the Vagrant Cloud. It
 contains a list of changes that each incorporate.
 
-### v1.2.0 - 2023-10-16
+### v1.2.0 - 2023-10-13
 
 * Bumped minimum Ansible version to `2.13` and `ansible.windows` to `2.1.0`
 * Updated OpenSSH version to [v9.4.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v9.4.0.0p1-Beta)

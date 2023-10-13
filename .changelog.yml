@@ -1,7 +1,7 @@
 # This generates CHANGELOG.md and changelog entries in the box description
 changelog:
 - version: '1.2.0'
-  date: 2023-10-16
+  date: 2023-10-13
   changes:
   - Bumped minimum Ansible version to `2.13` and `ansible.windows` to `2.1.0`
   - Updated OpenSSH version to [v9.4.0.0p1-Beta](https://github.com/PowerShell/Win32-OpenSSH/releases/tag/v9.4.0.0p1-Beta)
